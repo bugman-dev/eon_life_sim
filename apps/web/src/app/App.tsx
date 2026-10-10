@@ -144,10 +144,6 @@ export function App() {
         onCreate={createWorld}
         onLoad={loadWorld}
       >
-        <header>
-          <p>Phase 0</p>
-          <h1>Life Simulator</h1>
-        </header>
         {error ? <ErrorModal type="Error" message={error} onClose={() => setError(null)} /> : null}
         <PixiViewport />
       </Layout>
