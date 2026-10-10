@@ -64,9 +64,9 @@ Those four fields are written on the live session and persisted with the tick. T
 
 A new world is a finite grid. `WORLD_WIDTH` and `WORLD_HEIGHT` set that size, and both default to 128. Each side must be from 8 through 500. Generation version is `1`. The origin is the top-left tile `(0, 0)`. The generator lives in `apps/server/src/world` and does not import the database or the socket. Loading a world uses the size stored with its tiles.
 
-Randomness is a mulberry32 stream hashed from the stored seed plus a stage name. Elevation, water, terrain, soil, vegetation, and deposits each have their own stream. The same seed, version, width, and height always rebuild the same tiles. Loading a saved world reads those tiles and does not generate again.
+Randomness is a mulberry32 stream hashed from the stored seed plus a stage name. Terrain placement uses that stream. The same seed, version, width, and height always rebuild the same tiles. Loading a saved world reads those tiles and does not generate again.
 
-Terrain is `deep_water`, `shallow_water`, `sand`, `grassland`, `rocky`, or `mountain`. Forest is vegetation on land. Water is `none`, `lake`, `river`, or `coast`. Soil is `poor`, `normal`, or `fertile`, with a fertility value. Deposits are static `stone`, `ore`, and `clay`. Wood comes from vegetation. Water tiles do not hold vegetation or deposits.
+Terrain is `grass`, `dirt`, `sand`, or `water`. New maps are flat: elevation is 0, and vegetation and deposits are empty. Those fields stay on the tile for later.
 
 Create generates the map and writes the session, generation row, tiles, and deposits in one transaction. A failed check or a failed write leaves no session. A world created before maps existed stays without a map until someone creates a new one.
 
@@ -88,7 +88,7 @@ The page is the EON layout in `apps/web/src/app/Layout.tsx`. The PixiJS viewport
 
 Live pieces read the session, the map, and the socket status: the top connection readout, the world button and Create World dialog, both play/pause controls, the timeline clock, and the map. The world button shows the stored seed and, once a map has arrived, the dimensions. Server errors open `errorModal.tsx`. The dialog accepts a type of Error, Info, or Warning. Current failures use Error.
 
-The viewport follows the PixiJS 8 application lifecycle: one `Application`, `resizeTo` the map area, and objects added to `app.stage`. The map is one `Container`. Terrain and markers are `Graphics` leaves, drawn once when the map arrives. Pan and zoom change that container. The simulation ticker does not redraw tiles. Switching worlds replaces the container children and destroys the previous graphics. Unmounting the page destroys the application.
+The viewport follows the PixiJS 8 application lifecycle: one `Application`, `resizeTo` the map area, and objects added to `app.stage`. The map is one `Container`. Each tile is a `Sprite` for grass, dirt, sand, or water, drawn once when the map arrives. Pan and zoom change that container. The simulation ticker does not redraw tiles. Switching worlds replaces the container children and destroys the previous sprites. Unmounting the page destroys the application.
 
 A session with no map shows “This world has no generated map.” on the same full area.
 

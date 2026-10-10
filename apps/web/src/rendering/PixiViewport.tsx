@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorldMap } from "@life-simulator/shared";
+import type { TerrainType, WorldMap } from "@life-simulator/shared";
 import type { Container } from "pixi.js";
+import dirtUrl from "../assets/images/dirt.png";
 import grassUrl from "../assets/images/grass.png";
+import sandUrl from "../assets/images/sand.png";
+import waterUrl from "../assets/images/water.png";
 
-const GRID_SIZE = 250;
 const TILE_WIDTH = 64;
 const TILE_HEIGHT = 32;
+
+const terrainUrls: Record<TerrainType, string> = {
+  grass: grassUrl,
+  dirt: dirtUrl,
+  sand: sandUrl,
+  water: waterUrl,
+};
 
 type ViewState = {
   pixelWidth: number;
@@ -18,9 +27,9 @@ type Point = {
   y: number;
 };
 
-function isoPoint(gridX: number, gridY: number): Point {
+function isoPoint(gridX: number, gridY: number, mapHeight: number): Point {
   return {
-    x: (gridX - gridY) * (TILE_WIDTH / 2) + GRID_SIZE * (TILE_WIDTH / 2),
+    x: (gridX - gridY) * (TILE_WIDTH / 2) + mapHeight * (TILE_WIDTH / 2),
     y: (gridX + gridY) * (TILE_HEIGHT / 2),
   };
 }
@@ -148,53 +157,47 @@ export function PixiViewport({ map, status }: { map: WorldMap | null; status: st
     void (async () => {
       try {
         const pixi = await import("pixi.js");
-        const texture = await pixi.Assets.load<import("pixi.js").Texture>(grassUrl);
+        const textures = Object.fromEntries(
+          await Promise.all(
+            (Object.entries(terrainUrls) as [TerrainType, string][]).map(async ([terrain, url]) => [
+              terrain,
+              await pixi.Assets.load<import("pixi.js").Texture>(url),
+            ]),
+          ),
+        ) as Record<TerrainType, import("pixi.js").Texture>;
         if (cancelled || worldRef.current !== world) {
           return;
         }
 
-        const scale = TILE_WIDTH / texture.width;
-        const skirt = TILE_WIDTH * (texture.height / texture.width) - TILE_HEIGHT;
-        const layer = new pixi.ParticleContainer({
-          texture,
-          dynamicProperties: {
-            position: false,
-            rotation: false,
-            vertex: false,
-            uvs: false,
-            color: false,
-          },
-        });
-        layer.boundsArea = new pixi.Rectangle(0, 0, GRID_SIZE * TILE_WIDTH, GRID_SIZE * TILE_HEIGHT + skirt);
-
-        for (let sum = 0; sum < GRID_SIZE * 2 - 1; sum += 1) {
-          const xStart = Math.max(0, sum - (GRID_SIZE - 1));
-          const xEnd = Math.min(sum, GRID_SIZE - 1);
+        const skirt = TILE_WIDTH * (textures.grass.height / textures.grass.width) - TILE_HEIGHT;
+        const tiles = new Map(map.tiles.map((tile) => [`${tile.x},${tile.y}`, tile.terrainType]));
+        const layer = new pixi.Container();
+        for (let sum = 0; sum < map.width + map.height - 1; sum += 1) {
+          const xStart = Math.max(0, sum - (map.height - 1));
+          const xEnd = Math.min(sum, map.width - 1);
           for (let x = xStart; x <= xEnd; x += 1) {
             const y = sum - x;
-            const point = isoPoint(x, y);
-            layer.particleChildren.push(
-              new pixi.Particle({
-                texture,
-                x: point.x,
-                y: point.y,
-                scaleX: scale,
-                scaleY: scale,
-                anchorX: 0.5,
-                anchorY: 0,
-              }),
-            );
+            const terrain = tiles.get(`${x},${y}`);
+            if (!terrain) {
+              continue;
+            }
+            const texture = textures[terrain];
+            const sprite = new pixi.Sprite(texture);
+            const point = isoPoint(x, y, map.height);
+            sprite.anchor.set(0.5, 0);
+            sprite.scale.set(TILE_WIDTH / texture.width);
+            sprite.position.set(point.x, point.y);
+            layer.addChild(sprite);
           }
         }
-        layer.update();
         world.addChild(layer);
 
-        viewRef.current.pixelWidth = GRID_SIZE * TILE_WIDTH;
-        viewRef.current.pixelHeight = GRID_SIZE * TILE_HEIGHT + skirt;
+        viewRef.current.pixelWidth = ((map.width + map.height) * TILE_WIDTH) / 2;
+        viewRef.current.pixelHeight = ((map.width + map.height) * TILE_HEIGHT) / 2 + skirt;
         fitMap(host, world, viewRef.current);
       } catch (caught) {
         if (!cancelled) {
-          setError(caught instanceof Error ? caught.message : "Grass texture failed to load.");
+          setError(caught instanceof Error ? caught.message : "Map textures failed to load.");
         }
       }
     })();

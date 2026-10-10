@@ -19,6 +19,7 @@ Current migrations:
 - `002_world_clock.sql` adds `game_day`, `game_hour`, `game_minute`, and `game_second`, then backfills existing rows as one hour per tick.
 - `003_world_map.sql` adds generation metadata, tiles, and static resource deposits.
 - `004_world_size_limit.sql` raises the stored map side from 128 to 500.
+- `005_flat_terrain.sql` keeps terrain as grass, dirt, sand, and water, and clears elevation, vegetation, and deposits.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 

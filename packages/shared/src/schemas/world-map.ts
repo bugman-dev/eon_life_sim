@@ -6,14 +6,7 @@ export const MAX_WORLD_SIZE = 500;
 export const DEFAULT_WORLD_SIZE = 128;
 export const WORLD_TILE_SIZE = 1;
 
-export const terrainTypeSchema = z.enum([
-  "deep_water",
-  "shallow_water",
-  "sand",
-  "grassland",
-  "rocky",
-  "mountain",
-]);
+export const terrainTypeSchema = z.enum(["grass", "dirt", "sand", "water"]);
 
 export const waterTypeSchema = z.enum(["none", "lake", "river", "coast"]);
 

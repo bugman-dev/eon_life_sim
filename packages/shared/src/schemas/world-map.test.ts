@@ -7,7 +7,7 @@ function tile(x: number, y: number, patch: Partial<WorldTile> = {}): WorldTile {
   return {
     x,
     y,
-    terrainType: "grassland",
+    terrainType: "grass",
     elevation: 0.5,
     waterType: "none",
     soilType: "normal",

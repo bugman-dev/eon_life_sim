@@ -26,6 +26,12 @@ describe("world generation", () => {
     expect(first.width).toBe(128);
     expect(first.height).toBe(128);
     expect(first.tiles).toHaveLength(128 * 128);
+    expect(new Set(first.tiles.map((tile) => tile.terrainType))).toEqual(new Set(["grass", "dirt", "sand", "water"]));
+    expect(
+      first.tiles.every(
+        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetationType === "none" && tile.deposits.length === 0,
+      ),
+    ).toBe(true);
   });
 
   it("builds a small grid and rejects dimensions outside the supported range", () => {
