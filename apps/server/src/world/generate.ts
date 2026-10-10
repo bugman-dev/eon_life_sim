@@ -26,8 +26,6 @@ export type GeneratedWorld = {
   tiles: WorldTile[];
 };
 
-const DIRT_DISTANCE = 16;
-
 type Sample = {
   x: number;
   y: number;
@@ -263,8 +261,11 @@ function carveDownhillRivers(samples: Sample[], seed: bigint, width: number, hei
   const span = Math.min(width, height);
   const land = samples.filter((sample) => sample.terrain !== "water");
   const ranked = [...land].sort((left, right) => right.height - left.height || left.y - right.y || left.x - right.x);
-  const count = Math.max(4, Math.round(span / 8));
-  const spacing = span * 0.08;
+  const count = Math.min(
+    Math.max(span < 32 ? 1 : 3, Math.round(span / 20)),
+    Math.max(1, Math.floor(land.length / 12)),
+  );
+  const spacing = span * 0.16;
   const peak = ranked[0]?.height ?? 0;
   const starts: Sample[] = [];
   for (const candidate of ranked) {
@@ -278,6 +279,7 @@ function carveDownhillRivers(samples: Sample[], seed: bigint, width: number, hei
 
   for (const start of starts) {
     const seen = new Set<string>();
+    const path: Sample[] = [];
     let current = start;
     let sinceDrop = 0;
     for (let step = 0; step < width + height; step += 1) {
@@ -291,6 +293,7 @@ function carveDownhillRivers(samples: Sample[], seed: bigint, width: number, hei
       if (options.some((sample) => sample.terrain === "water")) {
         current.terrain = "water";
         current.waterType = "river";
+        path.push(current);
         break;
       }
       const landOptions = options.filter((sample) => sample.terrain !== "water");
@@ -309,11 +312,55 @@ function carveDownhillRivers(samples: Sample[], seed: bigint, width: number, hei
         .sort((left, right) => left.score - right.score || left.sample.y - right.sample.y || left.sample.x - right.sample.x)[0];
       current.terrain = "water";
       current.waterType = "river";
+      path.push(current);
       if (!next) {
         break;
       }
       sinceDrop = next.sample.coast < current.coast ? 0 : sinceDrop + 1;
       current = next.sample;
+    }
+    widenRiver(samples, path, width, height);
+  }
+}
+
+function widenRiver(samples: Sample[], path: Sample[], width: number, height: number) {
+  const span = Math.min(width, height);
+  if (span < 24 || path.length === 0) {
+    return;
+  }
+  for (let index = 0; index < path.length; index += 1) {
+    const sample = path[index];
+    if (!sample) {
+      continue;
+    }
+    const progress = index / Math.max(1, path.length - 1);
+    const radius = progress > 0.7 ? 2 : 1;
+    const before = path[Math.max(0, index - 1)] ?? sample;
+    const after = path[Math.min(path.length - 1, index + 1)] ?? sample;
+    let sideX = -(after.y - before.y);
+    let sideY = after.x - before.x;
+    const scale = Math.max(Math.abs(sideX), Math.abs(sideY));
+    if (scale === 0) {
+      sideX = 0;
+      sideY = 1;
+    } else {
+      sideX = Math.round(sideX / scale);
+      sideY = Math.round(sideY / scale);
+    }
+    for (const side of [-1, 1]) {
+      for (let step = 1; step <= radius; step += 1) {
+        const x = sample.x + sideX * side * step;
+        const y = sample.y + sideY * side * step;
+        if (x < 0 || y < 0 || x >= width || y >= height) {
+          continue;
+        }
+        const other = samples[y * width + x];
+        if (!other || other.terrain === "water") {
+          continue;
+        }
+        other.terrain = "water";
+        other.waterType = "river";
+      }
     }
   }
 }
@@ -377,17 +424,15 @@ function assignCoastSand(samples: Sample[], seed: bigint, width: number, height:
 
 function assignDryLand(samples: Sample[], seed: bigint, width: number, height: number) {
   const span = Math.min(width, height);
-  const dry = makeNoise(seed, "dry", Math.max(10, Math.round(span / 5)), Math.max(5, Math.round(span / 12)));
+  const dry = makeNoise(seed, "dry", Math.max(10, Math.round(span / 8)), 5);
   const distance = distanceFrom(samples, width, height, (sample) => sample.waterType === "river" || sample.waterType === "lake");
   for (let index = 0; index < samples.length; index += 1) {
     const sample = samples[index];
     const steps = distance[index] ?? -1;
-    if (!sample || sample.terrain !== "grass") {
+    if (!sample || sample.terrain !== "grass" || steps <= 8) {
       continue;
     }
-    const far = steps > DIRT_DISTANCE;
-    const patch = steps > 6 && dry(sample.x, sample.y) > 0.78;
-    if (far || patch) {
+    if (dry(sample.x, sample.y) > 0.74) {
       sample.terrain = "dirt";
     }
   }

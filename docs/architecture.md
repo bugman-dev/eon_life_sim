@@ -66,7 +66,7 @@ A new world is a finite grid. `WORLD_WIDTH` and `WORLD_HEIGHT` set that size, an
 
 Randomness is a mulberry32 stream hashed from the stored seed plus a stage name. Terrain placement uses that stream. The same seed, version, width, and height always rebuild the same tiles. Loading a saved world reads those tiles and does not generate again.
 
-Terrain is `grass`, `dirt`, `sand`, or `water`. A new map is an island in the ocean: the border is water, the coast is irregular, and a sandy shore a few tiles wide follows that ocean. Grass covers most of the interior. Dirt is the drier land farther from rivers and lakes. Rivers are one tile wide and walk downhill from high ground until they meet a lake or the ocean. Stored elevation stays 0. Vegetation and deposits stay empty for later. The white highland in reference art has no tile yet, so that ground stays grass.
+Terrain is `grass`, `dirt`, `sand`, or `water`. A new map is an island in the ocean: the border is water, the coast is irregular, and a sandy shore a few tiles wide follows that ocean. Grass covers most of the interior. Dirt is limited to small dry patches inland. A few rivers walk downhill from high ground until they meet a lake or the ocean. Each river is several tiles wide and broader near its mouth. Stored elevation stays 0. Vegetation and deposits stay empty for later. The white highland in reference art has no tile yet, so that ground stays grass.
 
 Create generates the map and writes the session, generation row, tiles, and deposits in one transaction. A failed check or a failed write leaves no session. A world created before maps existed stays without a map until someone creates a new one.
 
