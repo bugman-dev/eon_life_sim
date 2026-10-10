@@ -591,6 +591,8 @@ The simulation does not artificially protect successful settlements.
 
 ## Phase 0 — Foundation
 
+**Status:** Complete. See [docs/phase-0-report.md](docs/phase-0-report.md).
+
 ### Objective
 Create the application/server architecture.
 

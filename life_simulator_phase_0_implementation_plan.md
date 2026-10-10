@@ -1,6 +1,6 @@
 # Life Simulator — Phase 0 Implementation Plan
 **Document type:** Engineering implementation plan  
-**Status:** Proposed — ready for review and execution  
+**Status:** Implemented. The as-built record is [docs/phase-0-report.md](docs/phase-0-report.md). This file remains the original plan.  
 **Scope:** Foundation only; no actual world simulation or AI behavior yet
 
 ---
@@ -570,19 +570,19 @@ Phase 0 is a development foundation, not a hardened public service.
 
 Phase 0 is complete only when all of the following are true:
 
-- [ ] The client, backend, and PostgreSQL are represented in the documented architecture.
-- [ ] The project installs reproducibly from a clean checkout.
-- [ ] Docker Compose starts the required services.
-- [ ] Database migrations work on a fresh database.
-- [ ] A world session can be created and retrieved.
-- [ ] The server owns the simulation clock.
-- [ ] Start, pause, and resume work correctly.
-- [ ] State survives a normal restart.
-- [ ] Browser reconnects do not duplicate the runtime.
-- [ ] Two clients observe the same server-authoritative state.
-- [ ] Unit and integration tests pass.
-- [ ] The system works with AI services completely absent.
-- [ ] README and setup notes describe verified commands and known limitations.
+- [x] The client, backend, and PostgreSQL are represented in the documented architecture.
+- [x] The project installs reproducibly from a clean checkout.
+- [x] Docker Compose starts the required services.
+- [x] Database migrations work on a fresh database.
+- [x] A world session can be created and retrieved.
+- [x] The server owns the simulation clock.
+- [x] Start, pause, and resume work correctly.
+- [x] State survives a normal restart.
+- [x] Browser reconnects do not duplicate the runtime.
+- [x] Two clients observe the same server-authoritative state.
+- [x] Unit and integration tests pass.
+- [x] The system works with AI services completely absent.
+- [x] README and setup notes describe verified commands and known limitations.
 
 ---
 

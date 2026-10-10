@@ -2,6 +2,10 @@
 
 Phase 0 is a server-authoritative simulation shell. A browser can connect, create or load a world session, and start, pause, or resume a clock that PostgreSQL remembers. The browser does not own simulation time. No terrain, creatures, or AI are included.
 
+The dashboard around the clock is a reference layout for later phases. Population, tasks, events, and the other cards are hardcoded. The live data is the connection, the world session, and the clock.
+
+A tick is the simulation counter. By default one tick is one in-game hour. The server derives the day, hour, minute, and second from that counter and stores them with the session. The browser turns those fields into a year and a day-of-year. Seasons are not simulated yet.
+
 ## Requirements
 
 Verified on this machine:
@@ -11,6 +15,8 @@ Verified on this machine:
 - Docker Compose 5.3.0
 
 ## Run locally
+
+Copy `.env.example` to `.env` before the first run. The sample database password is `replace_me` and is only for this local database.
 
 Start PostgreSQL, apply migrations, then start the two apps from the repository root:
 
@@ -23,9 +29,7 @@ npm run dev:web
 
 Open http://localhost:5173/. The server health check is http://localhost:3000/health and readiness is http://localhost:3000/ready.
 
-Playing the clock, including start and stop, is described in [docs/how-to-play.md](docs/how-to-play.md).
-
-Copy `.env.example` to `.env` before the first run. The sample database password is `replace_me` and is only for this local database.
+Playing the clock is described in [docs/how-to-play.md](docs/how-to-play.md). Setup, the clock configuration, and UI live reload are in [docs/development.md](docs/development.md). The phase outcome is in [docs/phase-0-report.md](docs/phase-0-report.md).
 
 ## Run the full stack in Docker
 
@@ -33,7 +37,7 @@ Copy `.env.example` to `.env` before the first run. The sample database password
 docker compose up --build
 ```
 
-The web image is a static build. `VITE_WS_URL` is taken from `.env` at build time. Compose publishes the site and the server on `127.0.0.1` only. PostgreSQL is also limited to `127.0.0.1:5432`.
+The web image is a static build. `VITE_WS_URL` is taken from `.env` at build time, so a UI edit needs a rebuild or the Vite workflow in the development guide. Compose publishes the site and the server on `127.0.0.1` only. PostgreSQL is also limited to `127.0.0.1:5432`.
 
 `docker compose down -v` deletes the database volume.
 
@@ -44,11 +48,15 @@ npm test
 npm run typecheck
 ```
 
+`npm test` currently runs 17 tests across 7 files.
+
 ## Limits
 
 - The service assumes a trusted machine. There is no authentication.
-- A tick is a simulation counter, not a day or a real second. The clock fires once per `TICK_INTERVAL_MS` while running.
+- The clock fires once per `TICK_INTERVAL_MS` while running. `TICK_GAME_SECONDS` says how much in-game time that tick represents. The default is 3600, one hour.
+- Changing `TICK_GAME_SECONDS` reinterprets every existing tick. The calendar is calculated from the tick, not stored as its own timeline.
 - Tick progress is stored every `PERSIST_EVERY_TICKS` ticks, and again on pause or shutdown. A crash can drop the unsaved ticks since the last write.
 - Creating a world always creates a new session. Refreshing the browser reloads the last session id saved in the browser.
 - Restarting the server returns every session paused at its last saved tick.
+- Delete World, Step, the side navigation, and the stat cards are present for later work. They do not change the simulation.
 - AI, maps, and living entities are later phases.
