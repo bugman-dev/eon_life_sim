@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createStream } from "./prng.js";
 import { generateWorld } from "./generate.js";
@@ -52,11 +54,12 @@ describe("world generation", () => {
   });
 
   it("does not read the clock or an unseeded random source", () => {
-    const generate = readFileSync(new URL("./generate.ts", import.meta.url), "utf8");
-    const prng = readFileSync(new URL("./prng.ts", import.meta.url), "utf8");
-    expect(generate).not.toContain("Math.random");
-    expect(generate).not.toContain("Date.now");
-    expect(prng).not.toContain("Math.random");
-    expect(prng).not.toContain("Date.now");
+    const directory = dirname(fileURLToPath(new URL("./generate.ts", import.meta.url)));
+    const sources = readdirSync(directory).filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"));
+    for (const name of sources) {
+      const source = readFileSync(join(directory, name), "utf8");
+      expect(source, name).not.toContain("Math.random");
+      expect(source, name).not.toContain("Date.now");
+    }
   });
 });
