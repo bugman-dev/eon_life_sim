@@ -463,16 +463,44 @@
 }
 
 .eon-map-stage {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 0;
+  overflow: hidden;
+  background: #d7efc8;
+}
+
+.eon .eon-viewport {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+.eon-viewport-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.eon .eon-viewport canvas {
+  display: block;
+  width: 100%;
   height: 100%;
-  min-height: 420px;
-  padding: 118px 64px 78px;
-  overflow: auto;
-  background:
-    radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.45), transparent 28%),
-    radial-gradient(circle at 72% 64%, rgba(126, 196, 232, 0.45), transparent 32%),
-    linear-gradient(165deg, #e5f6d4, #cfeab8 46%, #d5eef8);
+  margin: 0;
+  border-radius: 0;
+}
+
+.eon-viewport-status {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: #526277;
 }
 
 .eon-stats,

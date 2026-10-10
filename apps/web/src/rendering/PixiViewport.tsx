@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 export function PixiViewport() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [message, setMessage] = useState("Starting renderer");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -18,9 +18,8 @@ export function PixiViewport() {
         const { Application } = await import("pixi.js");
         const application = new Application();
         await application.init({
-          width: 640,
-          height: 200,
-          background: "#e7f5ef",
+          resizeTo: host,
+          background: "#d7efc8",
         });
         if (cancelled) {
           application.destroy();
@@ -30,10 +29,9 @@ export function PixiViewport() {
         destroy = () => {
           application.destroy();
         };
-        setMessage("Renderer ready. The world is not generated in this phase.");
-      } catch (error) {
+      } catch (caught) {
         if (!cancelled) {
-          setMessage(error instanceof Error ? error.message : "Renderer failed to start.");
+          setError(caught instanceof Error ? caught.message : "Renderer failed to start.");
         }
       }
     })();
@@ -46,10 +44,9 @@ export function PixiViewport() {
   }, []);
 
   return (
-    <section>
-      <h2>World view</h2>
-      <p>{message}</p>
-      <div ref={hostRef} />
+    <section className="eon-viewport" aria-label="World view">
+      <div ref={hostRef} className="eon-viewport-canvas" />
+      {error ? <p className="eon-viewport-status">{error}</p> : null}
     </section>
   );
 }
