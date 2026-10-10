@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Life Simulator project vision, design principles, architecture, and implementation phases.">
+  <title>Life Simulator — Project Plan</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1e293b;
+      --muted: #64748b;
+      --paper: #ffffff;
+      --canvas: #f4f7fb;
+      --line: #e2e8f0;
+      --accent: #176b5b;
+      --accent-soft: #e7f5ef;
+      --link: #145b9b;
+      --code: #f1f5f9;
+      --quote: #f0f7f4;
+      --shadow: 0 12px 35px rgba(15, 23, 42, .06);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 16px/1.72 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .hero {
+      background: linear-gradient(135deg, #102b32, #176b5b 68%, #248b72);
+      color: #fff;
+      padding: 54px 24px 46px;
+    }
+    .hero-inner { max-width: 1240px; margin: 0 auto; }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: #bde8d9;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      font-size: .76rem;
+      font-weight: 750;
+    }
+    .hero h1 {
+      max-width: 850px;
+      margin: 0;
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      line-height: 1.12;
+      letter-spacing: -.035em;
+    }
+    .hero p {
+      max-width: 760px;
+      margin: 18px 0 0;
+      color: #e0f2ec;
+      font-size: 1.08rem;
+    }
+    .hero-quote {
+      display: inline-block;
+      margin-top: 25px;
+      padding: 10px 15px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 10px;
+      background: rgba(255,255,255,.08);
+      font-weight: 650;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1240px;
+      margin: 30px auto 64px;
+      padding: 0 24px;
+      align-items: start;
+    }
+    .sidebar {
+      position: sticky;
+      top: 18px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      padding: 20px 17px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    .sidebar h2 {
+      margin: 0 0 12px;
+      font-size: .88rem;
+      text-transform: uppercase;
+      letter-spacing: .09em;
+      color: var(--muted);
+    }
+    .sidebar ol { list-style: none; padding: 0; margin: 0; }
+    .sidebar li { margin: 2px 0; line-height: 1.4; }
+    .sidebar a {
+      display: block;
+      padding: 6px 8px;
+      border-radius: 7px;
+      color: #334155;
+      font-size: .88rem;
+    }
+    .sidebar a:hover { background: var(--accent-soft); color: var(--accent); text-decoration: none; }
+    .toc-level-3 a { padding-left: 20px; font-size: .82rem; color: #64748b; }
+    main {
+      min-width: 0;
+      padding: clamp(24px, 4vw, 52px);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+    main > h1:first-child { display: none; }
+    h2, h3, h4 { line-height: 1.3; letter-spacing: -.018em; scroll-margin-top: 20px; }
+    h2 {
+      margin: 2.3em 0 .75em;
+      padding-bottom: .42em;
+      border-bottom: 1px solid var(--line);
+      font-size: clamp(1.45rem, 2.5vw, 1.85rem);
+      color: #123c37;
+    }
+    h2:first-of-type { margin-top: 0; }
+    h3 { margin: 1.7em 0 .55em; font-size: 1.22rem; color: #245b50; }
+    h4 { margin: 1.3em 0 .4em; font-size: 1.05rem; }
+    p { margin: .75em 0; }
+    ul, ol { padding-left: 1.5rem; }
+    li { margin: .25em 0; padding-left: .12em; }
+    strong { color: #142d2a; }
+    blockquote {
+      margin: 1.4em 0;
+      padding: 13px 18px;
+      border-left: 4px solid var(--accent);
+      border-radius: 0 9px 9px 0;
+      background: var(--quote);
+      color: #214b42;
+    }
+    blockquote p { margin: .25em 0; }
+    hr { height: 1px; margin: 2em 0; border: 0; background: var(--line); }
+    code {
+      padding: .12em .34em;
+      border-radius: 5px;
+      background: var(--code);
+      font: .9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-wrap: anywhere;
+    }
+    pre {
+      overflow-x: auto;
+      padding: 17px 19px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f8fafc;
+      line-height: 1.55;
+    }
+    pre code { padding: 0; background: transparent; }
+    table { width: 100%; border-collapse: collapse; margin: 1.2em 0; font-size: .94rem; }
+    th, td { padding: 10px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: #f1f7f5; color: #17483f; font-weight: 700; }
+    tr:nth-child(even) td { background: #fbfdfc; }
+    .footer {
+      max-width: 1240px;
+      margin: -38px auto 35px;
+      padding: 0 24px;
+      color: var(--muted);
+      font-size: .85rem;
+      text-align: right;
+    }
+    .top-link {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      padding: 10px 13px;
+      border-radius: 999px;
+      background: #123c37;
+      color: #fff;
+      box-shadow: 0 5px 18px rgba(15, 23, 42, .2);
+      font-size: .85rem;
+      font-weight: 650;
+    }
+    .top-link:hover { color: #fff; text-decoration: none; background: #176b5b; }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; gap: 18px; margin-top: 18px; }
+      .sidebar { position: static; max-height: none; }
+      .sidebar ol { columns: 2; column-gap: 16px; }
+      .sidebar li { break-inside: avoid; }
+      main { padding: 26px 22px; }
+    }
+    @media (max-width: 560px) {
+      body { font-size: 15px; }
+      .hero { padding: 38px 20px 32px; }
+      .layout { padding: 0 12px; }
+      .sidebar ol { columns: 1; }
+      main { padding: 23px 17px; }
+      table { display: block; overflow-x: auto; white-space: normal; }
+      .footer { padding: 0 14px; }
+    }
+    @media print {
+      body { background: #fff; font-size: 10.5pt; }
+      .hero { background: #fff; color: #111; padding: 0 0 20px; }
+      .eyebrow, .hero p { color: #333; }
+      .hero-quote { border-color: #aaa; color: #111; background: transparent; }
+      .layout { display: block; max-width: none; margin: 0; padding: 0; }
+      .sidebar, .top-link { display: none; }
+      main { border: 0; box-shadow: none; padding: 0; }
+      h2, h3 { break-after: avoid; }
+      pre, blockquote, table { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+      .footer { margin: 18px 0 0; padding: 0; }
+    }
+  </style>
+</head>
+<body id="top">
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Project blueprint · Design and implementation</p>
+      <h1>Life Simulator</h1>
+      <p>A structured guide to the project's vision, core principles, simulation architecture, and implementation phases.</p>
+      <div class="hero-quote">Create a world, set it in motion, and watch life figure itself out.</div>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Table of contents">
+      <h2>On this page</h2>
+      <ol><li class="toc-level-2"><a href="#1-project-vision">1. Project Vision</a></li>
+<li class="toc-level-2"><a href="#2-core-philosophy">2. Core Philosophy</a></li>
+<li class="toc-level-3"><a href="#2-1-rule-based-world">2.1 Rule-based world</a></li>
+<li class="toc-level-3"><a href="#2-2-the-god">2.2 The god</a></li>
+<li class="toc-level-3"><a href="#2-3-simulation-owns-reality">2.3 Simulation owns reality</a></li>
+<li class="toc-level-3"><a href="#2-4-ai-is-not-the-foundation">2.4 AI is not the foundation</a></li>
+<li class="toc-level-3"><a href="#2-5-ai-provider-independence">2.5 AI-provider independence</a></li>
+<li class="toc-level-2"><a href="#headless-server">Headless server</a></li>
+<li class="toc-level-2"><a href="#ai-server">AI server</a></li>
+<li class="toc-level-2"><a href="#living">Living</a></li>
+<li class="toc-level-2"><a href="#physical">Physical</a></li>
+<li class="toc-level-2"><a href="#constructed">Constructed</a></li>
+<li class="toc-level-3"><a href="#renewable">Renewable</a></li>
+<li class="toc-level-3"><a href="#slowly-renewable">Slowly renewable</a></li>
+<li class="toc-level-3"><a href="#non-renewable">Non-renewable</a></li>
+<li class="toc-level-2"><a href="#phase-0-foundation">Phase 0 — Foundation</a></li>
+<li class="toc-level-3"><a href="#objective">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-1-world">Phase 1 — World</a></li>
+<li class="toc-level-3"><a href="#objective-2">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-2">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-2-entities">Phase 2 — Entities</a></li>
+<li class="toc-level-3"><a href="#objective-3">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-3">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-3-needs-survival">Phase 3 — Needs &amp; Survival</a></li>
+<li class="toc-level-3"><a href="#objective-4">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-4">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-4-autonomous-settlement">Phase 4 — Autonomous Settlement</a></li>
+<li class="toc-level-3"><a href="#objective-5">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-5">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-5-economy-knowledge">Phase 5 — Economy &amp; Knowledge</a></li>
+<li class="toc-level-3"><a href="#objective-6">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-6">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-6-society-history">Phase 6 — Society &amp; History</a></li>
+<li class="toc-level-3"><a href="#objective-7">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-7">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-7-ai-reasoning">Phase 7 — AI Reasoning</a></li>
+<li class="toc-level-3"><a href="#objective-8">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-8">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-8-advanced-memory-emergence">Phase 8 — Advanced Memory &amp; Emergence</a></li>
+<li class="toc-level-3"><a href="#objective-9">Objective</a></li>
+<li class="toc-level-3"><a href="#deliverable-9">Deliverable</a></li>
+<li class="toc-level-2"><a href="#phase-9-advanced-world">Phase 9 — Advanced World</a></li>
+<li class="toc-level-3"><a href="#objective-10">Objective</a></li></ol>
+    </nav>
+    <main>
+      <h1 id="life-simulator-project-philosophy-goal-implementation-plan">Life Simulator — Project Philosophy, Goal &amp; Implementation Plan</h1>
+<h2 id="1-project-vision">1. Project Vision</h2>
+<p>Build a persistent, browser-based life simulation in which a small group of settlers develops autonomously into a functioning village over generations.</p>
+<p>The user is a <strong>god-like observer and external force</strong>, not a conventional player character. The god observes the world and influences it through powers while inhabitants remain autonomous.</p>
+<blockquote>
+<p><strong>Create a world, set it in motion, and watch life figure itself out.</strong></p>
+</blockquote>
+<p>The village is not a scripted progression. It may thrive, stagnate, migrate, split, recover from disasters, or die out depending on the world and its inhabitants.</p>
+<hr />
+<h2 id="2-core-philosophy">2. Core Philosophy</h2>
+<h3 id="2-1-rule-based-world">2.1 Rule-based world</h3>
+<p>The simulation models the real world through abstractions rather than literal physical simulation.</p>
+<p>Examples:</p>
+<ul>
+<li>Water has availability and can move through the environment.</li>
+<li>Plants grow through stages.</li>
+<li>Trees accumulate biomass.</li>
+<li>Resources can be extracted, regenerated, or depleted.</li>
+<li>Humans and animals have needs.</li>
+<li>Unmet needs affect health and can cause death.</li>
+<li>Disease can cause death if untreated.</li>
+<li>Humans and animals age and reproduce.</li>
+<li>Geography influences settlement and resource use.</li>
+<li>Knowledge can spread, develop, or be lost.</li>
+</ul>
+<p>The goal is <strong>realistic emergent behavior at an appropriate simulation scale</strong>.</p>
+<h3 id="2-2-the-god">2.2 The god</h3>
+<p>The god:</p>
+<ul>
+<li>Observes the world.</li>
+<li>Uses UI controls and powers.</li>
+<li>Has unlimited power initially.</li>
+<li>Can manipulate the external world.</li>
+<li>Cannot directly control NPC free will.</li>
+<li>Cannot directly alter NPC natural development.</li>
+<li>Can create and destroy appropriate world entities.</li>
+<li>Can influence natural phenomena.</li>
+</ul>
+<p>Initial powers may include:</p>
+<ul>
+<li>Create</li>
+<li>Destroy</li>
+<li>Kill</li>
+<li>Spawn animals/plants/resources</li>
+<li>Remove resources</li>
+<li>Rain</li>
+<li>Wind</li>
+<li>Lightning</li>
+<li>Fire</li>
+<li>Flood</li>
+<li>Other natural phenomena</li>
+</ul>
+<p>The power system must be extensible.</p>
+<p>NPCs do not know that the god exists. If they independently reason that some supernatural force exists, that is an emergent outcome.</p>
+<h3 id="2-3-simulation-owns-reality">2.3 Simulation owns reality</h3>
+<p>The headless game server is authoritative for:</p>
+<ul>
+<li>World state</li>
+<li>NPC state</li>
+<li>Animals</li>
+<li>Plants</li>
+<li>Resources</li>
+<li>Buildings</li>
+<li>Relationships</li>
+<li>Knowledge</li>
+<li>Memories</li>
+<li>History</li>
+<li>Population</li>
+<li>Economy</li>
+<li>Saves</li>
+</ul>
+<blockquote>
+<p><strong>The AI proposes. The simulation validates and executes.</strong></p>
+</blockquote>
+<p>The AI can never directly modify authoritative state.</p>
+<h3 id="2-4-ai-is-not-the-foundation">2.4 AI is not the foundation</h3>
+<p>Basic behavior works without an LLM:</p>
+<ul>
+<li>Eating</li>
+<li>Drinking</li>
+<li>Sleeping</li>
+<li>Seeking shelter</li>
+<li>Gathering</li>
+<li>Farming</li>
+<li>Hunting</li>
+<li>Building</li>
+<li>Reproduction</li>
+<li>Basic social behavior</li>
+</ul>
+<p>AI is reserved for complex situations:</p>
+<ul>
+<li>Conflicting goals</li>
+<li>Novel situations</li>
+<li>Long-term planning</li>
+<li>Negotiation</li>
+<li>Important social decisions</li>
+<li>Complex interpretation</li>
+<li>Rich dialogue</li>
+</ul>
+<p>The simulation must continue if the AI provider is unavailable.</p>
+<h3 id="2-5-ai-provider-independence">2.5 AI-provider independence</h3>
+<p>The simulation uses an abstract AI-provider interface.</p>
+<p>Possible providers:</p>
+<ul>
+<li>Ollama + Qwen3</li>
+<li>Claude API</li>
+<li>OpenAI API</li>
+<li>Other providers</li>
+</ul>
+<p>Changing the provider must not require changing the simulation.</p>
+<hr />
+<h1 id="3-data-ownership">3. Data Ownership</h1>
+<h2 id="headless-server">Headless server</h2>
+<p>Owns all persistent game data.</p>
+<p>PostgreSQL is the authoritative store for:</p>
+<ul>
+<li>World</li>
+<li>Terrain</li>
+<li>Resources</li>
+<li>NPCs</li>
+<li>Animals</li>
+<li>Plants</li>
+<li>Buildings</li>
+<li>Relationships</li>
+<li>Skills</li>
+<li>Knowledge</li>
+<li>Memories</li>
+<li>Historical events</li>
+<li>Simulation state</li>
+<li>Save slots</li>
+</ul>
+<h2 id="ai-server">AI server</h2>
+<p>Performs inference.</p>
+<p>Initial local setup:</p>
+<pre><code class="language-text">Ollama
+  ↓
+Qwen3
+</code></pre>
+<p>The AI server does not own NPC memory.</p>
+<p>If semantic retrieval becomes necessary, Qdrant can be hosted on the headless server as an indexing/retrieval layer.</p>
+<pre><code class="language-text">PostgreSQL → authoritative facts/events/memories
+Qdrant     → semantic retrieval index
+AI         → uses selected context to reason
+</code></pre>
+<hr />
+<h1 id="4-simulation-entities">4. Simulation Entities</h1>
+<h2 id="living">Living</h2>
+<ul>
+<li>Humans</li>
+<li>Animals</li>
+<li>Plants</li>
+</ul>
+<h2 id="physical">Physical</h2>
+<ul>
+<li>Trees</li>
+<li>Rocks</li>
+<li>Water</li>
+<li>Resource deposits</li>
+<li>Soil</li>
+<li>Other environmental objects</li>
+</ul>
+<h2 id="constructed">Constructed</h2>
+<ul>
+<li>Houses</li>
+<li>Farms</li>
+<li>Storage</li>
+<li>Workshops</li>
+<li>Roads</li>
+<li>Other structures</li>
+</ul>
+<p>The entity catalogue expands over time.</p>
+<hr />
+<h1 id="5-plants-and-trees">5. Plants and Trees</h1>
+<p>V1 does not require complex botanical species modeling.</p>
+<p>Trees can initially simply be trees.</p>
+<p>A tree contains:</p>
+<ul>
+<li>Age</li>
+<li>Growth stage</li>
+<li>Biomass</li>
+<li>Harvestable biomass</li>
+<li>Health</li>
+<li>Position</li>
+</ul>
+<p>Growth stages determine biomass and harvest potential.</p>
+<p>Example:</p>
+<pre><code class="language-text">Seedling → Young → Mature → Old
+</code></pre>
+<p>Other plants can be:</p>
+<ul>
+<li>Edible</li>
+<li>Non-edible</li>
+<li>Poisonous</li>
+<li>Harvestable</li>
+<li>Reproductive</li>
+</ul>
+<p>Plant reproduction and regeneration can be expanded later.</p>
+<hr />
+<h1 id="6-resources">6. Resources</h1>
+<p>Resources physically exist in the world.</p>
+<h3 id="renewable">Renewable</h3>
+<ul>
+<li>Rain/water</li>
+<li>Plants</li>
+<li>Trees</li>
+<li>Crops</li>
+<li>Fish</li>
+<li>Animal populations</li>
+</ul>
+<h3 id="slowly-renewable">Slowly renewable</h3>
+<ul>
+<li>Soil fertility</li>
+<li>Forests</li>
+<li>Groundwater</li>
+</ul>
+<h3 id="non-renewable">Non-renewable</h3>
+<ul>
+<li>Coal</li>
+<li>Iron ore</li>
+<li>Gold</li>
+<li>Other mineral deposits</li>
+</ul>
+<p>Resources change through:</p>
+<ul>
+<li>Natural processes</li>
+<li>Harvesting</li>
+<li>Consumption</li>
+<li>Extraction</li>
+<li>God actions</li>
+<li>Environmental events</li>
+</ul>
+<p>Initial resource simulation remains intentionally simple.</p>
+<hr />
+<h1 id="7-animals">7. Animals</h1>
+<p>V1 includes several species with simple ecological roles:</p>
+<ul>
+<li>Herbivores</li>
+<li>Carnivores</li>
+</ul>
+<p>Animals have:</p>
+<ul>
+<li>Species</li>
+<li>Position</li>
+<li>Age</li>
+<li>Health</li>
+<li>Hunger</li>
+<li>Thirst</li>
+<li>Energy</li>
+<li>Sex</li>
+<li>Reproduction</li>
+</ul>
+<p>Animals can:</p>
+<ul>
+<li>Eat</li>
+<li>Drink</li>
+<li>Move</li>
+<li>Rest</li>
+<li>Hunt</li>
+<li>Flee</li>
+<li>Reproduce</li>
+<li>Die</li>
+</ul>
+<p>V1 animal intelligence is deterministic.</p>
+<hr />
+<h1 id="8-humans">8. Humans</h1>
+<p>Humans are the most sophisticated entities.</p>
+<p>Each human can have:</p>
+<ul>
+<li>Identity</li>
+<li>Age</li>
+<li>Health</li>
+<li>Needs</li>
+<li>Personality</li>
+<li>Skills</li>
+<li>Knowledge</li>
+<li>Goals</li>
+<li>Intent</li>
+<li>Inventory</li>
+<li>Relationships</li>
+<li>Family</li>
+<li>Memories</li>
+<li>Position</li>
+<li>Occupation</li>
+</ul>
+<p>Life cycle:</p>
+<pre><code class="language-text">Birth → Infant → Child → Teenager → Adult → Elder → Death
+</code></pre>
+<p>Children are fully simulated entities.</p>
+<hr />
+<h1 id="9-needs-and-health">9. Needs and Health</h1>
+<p>Initial needs:</p>
+<ul>
+<li>Hunger</li>
+<li>Thirst</li>
+<li>Sleep/Energy</li>
+<li>Temperature/Exposure</li>
+<li>Shelter</li>
+<li>Health</li>
+<li>Injury</li>
+<li>Disease</li>
+</ul>
+<p>Needs are continuous values rather than binary states.</p>
+<p>Unmet needs affect other systems.</p>
+<p>Example:</p>
+<pre><code class="language-text">Hunger
+  ↓
+Health decreases
+  ↓
+Energy decreases
+  ↓
+Work efficiency decreases
+  ↓
+Disease/death risk increases
+</code></pre>
+<p>Lack of shelter does not automatically cause death. Its consequences depend on climate, temperature, weather, clothing, health, injury, and duration.</p>
+<hr />
+<h1 id="10-knowledge">10. Knowledge</h1>
+<p>Knowledge is a first-class simulation concept.</p>
+<p>Initial settlers receive configurable starting knowledge, such as:</p>
+<ul>
+<li>Fire</li>
+<li>Hunting</li>
+<li>Basic farming</li>
+<li>Shelter construction</li>
+<li>Stone tools</li>
+</ul>
+<p>Knowledge can be:</p>
+<ul>
+<li>Learned</li>
+<li>Practiced</li>
+<li>Taught</li>
+<li>Passed to future generations</li>
+<li>Discovered</li>
+<li>Forgotten</li>
+<li>Incorrect</li>
+</ul>
+<p>NPCs can create knowledge through experimentation.</p>
+<pre><code class="language-text">Observation → Hypothesis → Experiment → Result → Knowledge
+</code></pre>
+<hr />
+<h1 id="11-false-knowledge-and-beliefs">11. False Knowledge and Beliefs</h1>
+<p>NPCs can be wrong.</p>
+<p>The simulation should eventually distinguish:</p>
+<ul>
+<li>Fact</li>
+<li>Knowledge</li>
+<li>Belief</li>
+<li>Technique</li>
+<li>Skill</li>
+</ul>
+<p>False beliefs can spread, persist, and later be corrected.</p>
+<p>This becomes important for future culture and AI reasoning.</p>
+<hr />
+<h1 id="12-perception-and-information">12. Perception and Information</h1>
+<p>NPCs are not omniscient.</p>
+<p>They perceive their environment and learn through:</p>
+<ul>
+<li>Observation</li>
+<li>Conversation</li>
+<li>Teaching</li>
+<li>Events</li>
+<li>Rumors</li>
+<li>Family communication</li>
+<li>Community interaction</li>
+</ul>
+<p>Information can therefore propagate:</p>
+<pre><code class="language-text">Event
+ ↓
+Witness
+ ↓
+Conversation
+ ↓
+Other NPC
+ ↓
+Knowledge / belief
+</code></pre>
+<p>This supports future culture, religion, politics, and social systems.</p>
+<hr />
+<h1 id="13-geography">13. Geography</h1>
+<p>Geography influences civilization without hardcoding outcomes.</p>
+<p>Example:</p>
+<pre><code class="language-text">River → water → agriculture → settlement opportunity
+</code></pre>
+<pre><code class="language-text">Mountain → mineral deposits → mining → metalworking
+</code></pre>
+<p>The simulation creates incentives and constraints; it does not force predefined civilization paths.</p>
+<hr />
+<h1 id="14-actions">14. Actions</h1>
+<p>Use a unified action system.</p>
+<pre><code class="language-text">Action
+├── Actor
+├── Target
+├── Location
+├── Duration
+├── Requirements
+├── Effects
+└── Interruption conditions
+</code></pre>
+<p>Examples:</p>
+<ul>
+<li>Move</li>
+<li>Eat</li>
+<li>Drink</li>
+<li>Sleep</li>
+<li>Gather</li>
+<li>Harvest</li>
+<li>Plant</li>
+<li>Hunt</li>
+<li>Build</li>
+<li>Talk</li>
+<li>Teach</li>
+<li>Trade</li>
+<li>Learn</li>
+<li>Attack</li>
+</ul>
+<p>Actions can take time and be interrupted.</p>
+<p>God powers should eventually use the same underlying action/event framework.</p>
+<hr />
+<h1 id="15-world-events">15. World Events</h1>
+<p>All meaningful world changes flow through the simulation.</p>
+<p>Sources:</p>
+<ul>
+<li>Natural systems</li>
+<li>NPC actions</li>
+<li>God actions</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-text">God clicks &quot;Rain&quot;
+      ↓
+God action
+      ↓
+Simulation event
+      ↓
+Weather/water systems
+      ↓
+World changes
+      ↓
+NPCs perceive change
+      ↓
+NPCs react
+</code></pre>
+<p>This provides one consistent event architecture.</p>
+<hr />
+<h1 id="16-autonomous-npc-decision-architecture">16. Autonomous NPC Decision Architecture</h1>
+<p>NPCs do not directly decide whether to call an LLM.</p>
+<p>A Decision Manager handles this.</p>
+<pre><code class="language-text">NPC situation
+      ↓
+Decision Manager
+      │
+      ├── Simple → Rules / Utility → Action
+      │
+      └── Complex → AI Queue → LLM
+                              ↓
+                       Proposed Action
+                              ↓
+                       Validation
+                              ↓
+                            Action
+</code></pre>
+<p>The conceptual decision pipeline is:</p>
+<pre><code class="language-text">Perception
+    ↓
+Needs + Goals + Knowledge
+    ↓
+Intent
+    ↓
+Candidate Actions
+    ↓
+Decision
+    ↓
+Validation
+    ↓
+Execution
+</code></pre>
+<hr />
+<h1 id="17-self-sustaining-village">17. Self-Sustaining Village</h1>
+<p>&quot;Self-sustaining&quot; is not an artificial game state.</p>
+<p>The village survives because its underlying systems support it.</p>
+<p>Examples:</p>
+<pre><code class="language-text">Food production &gt;= consumption
+Water availability &gt;= consumption
+Housing capacity &gt;= population requirements
+Long-term resource regeneration &gt;= extraction
+</code></pre>
+<p>Temporary shortages are allowed.</p>
+<p>A village may experience:</p>
+<ul>
+<li>Famine</li>
+<li>Drought</li>
+<li>Population decline</li>
+<li>Resource depletion</li>
+<li>Disease</li>
+<li>Death</li>
+<li>Migration</li>
+<li>Recovery</li>
+<li>Collapse</li>
+</ul>
+<p>The simulation does not artificially protect successful settlements.</p>
+<hr />
+<h1 id="18-implementation-phases">18. Implementation Phases</h1>
+<h2 id="phase-0-foundation">Phase 0 — Foundation</h2>
+<h3 id="objective">Objective</h3>
+<p>Create the application/server architecture.</p>
+<p>Initial stack:</p>
+<ul>
+<li>React</li>
+<li>TypeScript</li>
+<li>PixiJS</li>
+<li>Node.js</li>
+<li>PostgreSQL</li>
+<li>WebSocket</li>
+<li>Docker</li>
+</ul>
+<p>No AI dependency.</p>
+<h3 id="deliverable">Deliverable</h3>
+<p>Browser connects to the headless server and displays basic simulation/server state.</p>
+<hr />
+<h2 id="phase-1-world">Phase 1 — World</h2>
+<h3 id="objective-2">Objective</h3>
+<p>Create a procedural world.</p>
+<p>V1 uses procedural generation.</p>
+<p>The world contains:</p>
+<ul>
+<li>Terrain</li>
+<li>Water</li>
+<li>Forests</li>
+<li>Basic plants</li>
+<li>Basic animals</li>
+<li>Resource deposits</li>
+<li>Soil</li>
+<li>Coordinates</li>
+<li>Simulation clock</li>
+</ul>
+<p>World generation is deterministic from a seed.</p>
+<h3 id="deliverable-2">Deliverable</h3>
+<p>A generated world can be viewed, navigated, paused, and simulated.</p>
+<hr />
+<h2 id="phase-2-entities">Phase 2 — Entities</h2>
+<h3 id="objective-3">Objective</h3>
+<p>Introduce the fundamental entity model.</p>
+<p>Implement:</p>
+<ul>
+<li>Plants</li>
+<li>Trees</li>
+<li>Animals</li>
+<li>Resources</li>
+<li>Humans</li>
+<li>Basic world objects</li>
+</ul>
+<p>Introduce:</p>
+<ul>
+<li>Position</li>
+<li>Age</li>
+<li>Health</li>
+<li>Growth</li>
+<li>Basic state</li>
+<li>Inventory where appropriate</li>
+</ul>
+<h3 id="deliverable-3">Deliverable</h3>
+<p>Entities exist and change over simulation time.</p>
+<hr />
+<h2 id="phase-3-needs-survival">Phase 3 — Needs &amp; Survival</h2>
+<h3 id="objective-4">Objective</h3>
+<p>Make entities genuinely dependent on their environment.</p>
+<p>Implement:</p>
+<ul>
+<li>Hunger</li>
+<li>Thirst</li>
+<li>Energy</li>
+<li>Temperature/exposure</li>
+<li>Shelter</li>
+<li>Health</li>
+<li>Injury</li>
+<li>Disease</li>
+<li>Death</li>
+</ul>
+<p>Implement basic animal behavior and basic deterministic human behavior.</p>
+<h3 id="deliverable-4">Deliverable</h3>
+<p>Humans and animals can survive or die based on the world.</p>
+<p>No AI.</p>
+<hr />
+<h2 id="phase-4-autonomous-settlement">Phase 4 — Autonomous Settlement</h2>
+<h3 id="objective-5">Objective</h3>
+<p>Allow initial settlers to form a settlement without player micromanagement.</p>
+<p>Implement:</p>
+<ul>
+<li>Deterministic decision system</li>
+<li>Goals</li>
+<li>Candidate actions</li>
+<li>Utility scoring</li>
+<li>Movement</li>
+<li>Gathering</li>
+<li>Farming</li>
+<li>Hunting</li>
+<li>Shelter</li>
+<li>Storage</li>
+<li>Construction</li>
+<li>Basic jobs</li>
+<li>Families</li>
+<li>Reproduction</li>
+<li>Aging</li>
+<li>Children</li>
+</ul>
+<p>Building decisions emerge from needs and resources rather than a scripted progression.</p>
+<h3 id="deliverable-5">Deliverable</h3>
+<p>Approximately 10 settlers can develop into a small settlement without direct control.</p>
+<hr />
+<h2 id="phase-5-economy-knowledge">Phase 5 — Economy &amp; Knowledge</h2>
+<h3 id="objective-6">Objective</h3>
+<p>Make the settlement economically and intellectually meaningful.</p>
+<p>Implement:</p>
+<ul>
+<li>Resource production</li>
+<li>Consumption</li>
+<li>Inventory</li>
+<li>Basic trade</li>
+<li>Occupations</li>
+<li>Skill development</li>
+<li>Knowledge</li>
+<li>Teaching</li>
+<li>Learning</li>
+<li>Discovery</li>
+<li>Experimentation</li>
+<li>Knowledge inheritance</li>
+<li>Basic social relationships</li>
+</ul>
+<p>Initial settlers have predefined knowledge. New knowledge can emerge through experimentation.</p>
+<h3 id="deliverable-6">Deliverable</h3>
+<p>A settlement can develop specialization and acquire knowledge over generations.</p>
+<hr />
+<h2 id="phase-6-society-history">Phase 6 — Society &amp; History</h2>
+<h3 id="objective-7">Objective</h3>
+<p>Create persistent individuals and communities.</p>
+<p>Implement:</p>
+<ul>
+<li>Relationships</li>
+<li>Families</li>
+<li>Reputation</li>
+<li>Social groups</li>
+<li>Community decisions</li>
+<li>Historical events</li>
+<li>Individual memories</li>
+<li>Village history</li>
+<li>Communication</li>
+<li>Information propagation</li>
+<li>Basic false beliefs</li>
+</ul>
+<h3 id="deliverable-7">Deliverable</h3>
+<p>The village develops a recognizable social history.</p>
+<hr />
+<h2 id="phase-7-ai-reasoning">Phase 7 — AI Reasoning</h2>
+<h3 id="objective-8">Objective</h3>
+<p>Introduce LLM reasoning where deterministic systems become insufficient.</p>
+<pre><code class="language-text">NPC situation
+      ↓
+Decision Manager
+      ↓
+Simple?
+  /       Yes        No
+ ↓          ↓
+Rules      AI Queue
+             ↓
+        AI Provider
+             ↓
+      Proposed Action
+             ↓
+         Validation
+             ↓
+           Action
+</code></pre>
+<p>AI candidates:</p>
+<ul>
+<li>Complex personal decisions</li>
+<li>Conflicting goals</li>
+<li>Novel situations</li>
+<li>Negotiation</li>
+<li>Long-term plans</li>
+<li>Important social decisions</li>
+<li>Complex interpretation</li>
+<li>Dialogue</li>
+</ul>
+<p>Initial local provider:</p>
+<pre><code class="language-text">Ollama → Qwen3
+</code></pre>
+<p>The provider remains replaceable.</p>
+<h3 id="deliverable-8">Deliverable</h3>
+<p>NPCs remain deterministic at the basic level while selected decisions gain richer reasoning.</p>
+<hr />
+<h2 id="phase-8-advanced-memory-emergence">Phase 8 — Advanced Memory &amp; Emergence</h2>
+<h3 id="objective-9">Objective</h3>
+<p>Make individual lives and village history deeply persistent.</p>
+<p>Implement:</p>
+<ul>
+<li>Long-term memory</li>
+<li>Semantic memory retrieval</li>
+<li>Important-event weighting</li>
+<li>Historical retrieval</li>
+<li>Better AI context construction</li>
+<li>Advanced planning</li>
+</ul>
+<p>Potential infrastructure:</p>
+<pre><code class="language-text">PostgreSQL → authoritative memory/events
+Qdrant     → semantic retrieval
+</code></pre>
+<h3 id="deliverable-9">Deliverable</h3>
+<p>NPC decisions can be influenced by relevant events from years or generations earlier.</p>
+<hr />
+<h2 id="phase-9-advanced-world">Phase 9 — Advanced World</h2>
+<h3 id="objective-10">Objective</h3>
+<p>Expand from village simulation toward civilization simulation.</p>
+<p>Potential systems:</p>
+<ul>
+<li>Seasons</li>
+<li>Advanced weather</li>
+<li>Natural disasters</li>
+<li>Complex ecology</li>
+<li>Culture</li>
+<li>Religion</li>
+<li>Language</li>
+<li>Politics</li>
+<li>Institutions</li>
+<li>Technology</li>
+<li>Multiple settlements</li>
+<li>Migration</li>
+<li>Diplomacy</li>
+<li>Warfare</li>
+<li>Advanced economy</li>
+</ul>
+<p>These are long-term systems, not requirements for the first village.</p>
+<hr />
+<h1 id="19-development-strategy">19. Development Strategy</h1>
+<p>Build through vertical slices rather than isolated systems.</p>
+<p>Example:</p>
+<pre><code class="language-text">Plant
+ ↓
+Growth
+ ↓
+NPC perceives plant
+ ↓
+NPC knows/how learns to harvest
+ ↓
+Harvest action
+ ↓
+Food enters inventory
+ ↓
+NPC consumes food
+ ↓
+Health changes
+</code></pre>
+<p>Each slice should create a complete working loop before expanding.</p>
+<hr />
+<h1 id="20-performance-strategy">20. Performance Strategy</h1>
+<p>Initial target is a deep simulation rather than a huge population.</p>
+<table>
+<thead>
+<tr>
+  <th>Stage</th>
+  <th style="text-align:right">Population</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Initial settlers</td>
+  <td style="text-align:right">8–10</td>
+</tr>
+<tr>
+  <td>Survival</td>
+  <td style="text-align:right">10–20</td>
+</tr>
+<tr>
+  <td>Settlement</td>
+  <td style="text-align:right">20–50</td>
+</tr>
+<tr>
+  <td>Village</td>
+  <td style="text-align:right">50–100</td>
+</tr>
+<tr>
+  <td>Mature village</td>
+  <td style="text-align:right">100–250</td>
+</tr>
+<tr>
+  <td>Beyond 250</td>
+  <td style="text-align:right">Profile first</td>
+</tr>
+</tbody>
+</table>
+<p>Use:</p>
+<ul>
+<li>Event-driven behavior where possible</li>
+<li>Deterministic systems</li>
+<li>Simulation level-of-detail</li>
+<li>Background simulation for inactive entities</li>
+<li>AI request prioritization</li>
+<li>AI request budgets</li>
+</ul>
+<p>The simulation must continue if the AI provider is unavailable.</p>
+<hr />
+<h1 id="21-save-system">21. Save System</h1>
+<p>The final product requires save slots.</p>
+<p>A save preserves the authoritative world state:</p>
+<ul>
+<li>Terrain</li>
+<li>Resources</li>
+<li>Entities</li>
+<li>NPCs</li>
+<li>Animals</li>
+<li>Buildings</li>
+<li>Knowledge</li>
+<li>Relationships</li>
+<li>Memories</li>
+<li>Events</li>
+<li>Simulation time</li>
+</ul>
+<p>Save snapshots are also useful for experiments:</p>
+<pre><code class="language-text">Save
+ ↓
+Change the world
+ ↓
+Observe consequences
+ ↓
+Reload
+</code></pre>
+<hr />
+<h1 id="22-testing-philosophy">22. Testing Philosophy</h1>
+<p>The simulation must be testable without relying only on visual inspection.</p>
+<p>Support:</p>
+<ul>
+<li>Fixed world seeds</li>
+<li>Deterministic runs where possible</li>
+<li>Automated long-duration simulations</li>
+<li>Population statistics</li>
+<li>Resource statistics</li>
+<li>Birth/death statistics</li>
+<li>Failure analysis</li>
+<li>Performance benchmarks</li>
+<li>Regression tests</li>
+</ul>
+<p>Example:</p>
+<pre><code class="language-text">Seed: 12345
+Population: 10
+Simulation: 100 years
+</code></pre>
+<p>Measure:</p>
+<ul>
+<li>Population</li>
+<li>Food production</li>
+<li>Food consumption</li>
+<li>Births</li>
+<li>Deaths</li>
+<li>Resource depletion</li>
+<li>Resource regeneration</li>
+<li>Buildings</li>
+<li>Knowledge</li>
+</ul>
+<p>AI introduces nondeterminism, but the underlying deterministic simulation should remain reproducible.</p>
+<hr />
+<h1 id="23-first-major-milestone-the-village">23. First Major Milestone — The Village</h1>
+<p>The first major release is intentionally smaller than the long-term vision.</p>
+<p>Start with:</p>
+<pre><code class="language-text">10 settlers
+     ↓
+Undeveloped world
+     ↓
+Basic survival
+     ↓
+Food
+     ↓
+Shelter
+     ↓
+Farming
+     ↓
+Families
+     ↓
+Children
+     ↓
+Jobs
+     ↓
+Construction
+     ↓
+Population growth
+     ↓
+Resource management
+     ↓
+50+ people
+     ↓
+Functioning village
+</code></pre>
+<p>The defining test is:</p>
+<blockquote>
+<p><strong>Can we start with a small group of settlers, leave the simulation alone, and return later to find a believable village that developed without direct control?</strong></p>
+</blockquote>
+<p>If yes, the core concept works.</p>
+<hr />
+<h1 id="24-final-design-principle">24. Final Design Principle</h1>
+<blockquote>
+<p><strong>Do not build the simulation around what we currently want the village to do. Build general systems that allow the village to decide what it should do.</strong></p>
+</blockquote>
+<p>Avoid scripted progression:</p>
+<pre><code class="language-text">Day 10 → Farm
+Day 20 → Blacksmith
+Day 30 → Market
+Day 40 → School
+</code></pre>
+<p>Prefer:</p>
+<pre><code class="language-text">Needs
++
+Environment
++
+Resources
++
+Knowledge
++
+Skills
++
+Goals
++
+Relationships
++
+Actions
+        ↓
+Emergent behavior
+        ↓
+Village
+</code></pre>
+<p>The objective is not to create a convincing animation of a village.</p>
+<p>The objective is to create a <strong>world in which a village can genuinely emerge</strong>.</p>
+
+    </main>
+  </div>
+  <div class="footer">Life Simulator · Project plan</div>
+  <a class="top-link" href="#top" aria-label="Back to top">↑ Top</a>
+</body>
+</html>

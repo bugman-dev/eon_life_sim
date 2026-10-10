@@ -1,0 +1,27 @@
+{
+  "name": "@life-simulator/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "db:migrate": "tsx src/persistence/migrate.ts"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.3.3",
+    "@life-simulator/shared": "^0.0.0",
+    "dotenv": "^18.0.6",
+    "fastify": "^5.12.5",
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "@types/pg": "^8.23.1",
+    "@types/ws": "^8.18.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

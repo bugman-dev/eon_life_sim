@@ -1,0 +1,86 @@
+:root {
+  color: #1e293b;
+  background: #f4f7fb;
+  font: 16px/1.5 system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+}
+
+header p {
+  margin: 0;
+  color: #176b5b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+header h1 {
+  margin: 4px 0 20px;
+}
+
+section {
+  margin: 0 0 12px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+section h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+section p {
+  margin: 0;
+}
+
+button {
+  margin: 12px 8px 0 0;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+label {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+}
+
+code {
+  font-size: 0.85rem;
+}
+
+.error {
+  margin: 0 0 12px;
+  color: #9f1239;
+}
+
+section canvas {
+  width: 100%;
+  height: auto;
+  margin-top: 12px;
+  border-radius: 8px;
+}

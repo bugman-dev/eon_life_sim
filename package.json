@@ -1,0 +1,19 @@
+{
+  "name": "life-simulator",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @life-simulator/web",
+    "dev:server": "npm run dev -w @life-simulator/server",
+    "db:migrate": "npm run db:migrate -w @life-simulator/server",
+    "test": "vitest run",
+    "typecheck": "tsc -p packages/shared/tsconfig.json --noEmit && tsc -p apps/server/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3"
+  }
+}

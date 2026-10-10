@@ -1,0 +1,19 @@
+FROM node:24.18.1-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/server/package.json apps/server/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
+RUN npm ci
+
+COPY tsconfig.base.json ./
+COPY apps/server apps/server
+COPY packages/shared packages/shared
+
+USER node
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npm run db:migrate -w @life-simulator/server && npm run start -w @life-simulator/server"]
