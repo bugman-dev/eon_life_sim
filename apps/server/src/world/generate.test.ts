@@ -27,6 +27,14 @@ describe("world generation", () => {
     expect(first.height).toBe(128);
     expect(first.tiles).toHaveLength(128 * 128);
     expect(new Set(first.tiles.map((tile) => tile.terrainType))).toEqual(new Set(["grass", "dirt", "sand", "water"]));
+    expect(first.tiles.some((tile) => tile.waterType === "coast")).toBe(true);
+    expect(first.tiles.some((tile) => tile.waterType === "river")).toBe(true);
+    expect(first.tiles.some((tile) => tile.waterType === "lake")).toBe(true);
+    const border = first.tiles.filter((tile) => tile.x === 0 || tile.y === 0 || tile.x === 127 || tile.y === 127);
+    expect(border.every((tile) => tile.terrainType === "water")).toBe(true);
+    const land = first.tiles.filter((tile) => tile.terrainType !== "water");
+    const grass = land.filter((tile) => tile.terrainType === "grass").length;
+    expect(grass).toBeGreaterThan(land.length / 2);
     expect(
       first.tiles.every(
         (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetationType === "none" && tile.deposits.length === 0,
