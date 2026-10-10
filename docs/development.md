@@ -17,6 +17,7 @@ Current migrations:
 
 - `001_world_sessions.sql` creates the session table.
 - `002_world_clock.sql` adds `game_day`, `game_hour`, `game_minute`, and `game_second`, then backfills existing rows as one hour per tick.
+- `003_world_map.sql` adds generation metadata, tiles, and static resource deposits.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 
@@ -38,6 +39,12 @@ Integration tests use a separate database, `life_sim_test`, on that same Postgre
 The clock is `tick * TICK_GAME_SECONDS`, converted into day, hour, minute, and second. New worlds start at day 1, 00:00:00, tick 0. With the default, minute and second stay 0. Changing `TICK_GAME_SECONDS` and restarting the server makes the next tick reinterpret the whole tick count. Restart the server after changing `.env`.
 
 The browser adds a display calendar on top of the stored day. A year is 365 days. The header day is the day within that year. Year progress uses the same 365 days plus the fraction of the current day. A month of 30 days is calculated only for the timeline console log. Seasons are not derived.
+
+## World generation
+
+New worlds are 128×128 tiles, generation version `1`. The server derives the map from `world_sessions.seed`. A missing seed is filled in once at creation. The same seed and version always produce the same tiles. A saved map is loaded as stored.
+
+A world created before this migration has no map. Opening it shows “This world has no generated map.” Create a new world to generate one. Run `npm run db:migrate` before starting a server that expects the map tables.
 
 ## UI live reload
 
@@ -77,18 +84,18 @@ Live UI:
 - Create and load in `apps/web/src/modals/createWorld.tsx`
 - Play and pause in the top bar and in `eonTimeline.tsx`
 - Errors in `apps/web/src/modals/errorModal.tsx`
-- The Pixi viewport in the map area, still empty
+- The generated map in `apps/web/src/rendering/PixiViewport.tsx`
 
 The last world id is stored in the browser under `life-simulator:last-world-id`.
 
 ## What was verified
 
-- `npm test` on 10 October 2026 — 7 files, 17 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock.
+- `npm test` on 10 October 2026 — 10 files, 23 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, deterministic world generation, map persistence and rollback, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock without receiving the map on a tick.
 - `npm run typecheck`
-- `npm run db:migrate` applies `001_world_sessions.sql` and `002_world_clock.sql` on a database that does not already have them.
+- `npm run db:migrate` applies `001_world_sessions.sql`, `002_world_clock.sql`, and `003_world_map.sql` on a database that does not already have them.
 - A live server at `http://127.0.0.1:3000` created a world, advanced the tick for two clients, paused, and returned that same paused tick after a new connection.
 - `GET /health` and `GET /ready` returned ok while PostgreSQL was up.
-- `docker compose up --build` served the site and the server. Health, readiness, and creating a world through the container succeeded.
+- `docker compose up --build` served the site and the server. Health, readiness, and creating a world through the container succeeded. The container image needs a rebuild before it includes map generation.
 
 ## Deploying later
 
@@ -102,7 +109,6 @@ There is no authentication. Keep the service on a trusted network.
 
 - The dev database password in `.env.example` is the placeholder `replace_me`.
 - Docker must be running before `npm run dev:server`. Without it, startup retries and then exits.
-- The PixiJS panel is an empty viewport. It is not a world renderer.
 - The header season and time, and the World Status card, stay on Spring. Seasons are a later step.
 - A 30-day month and a 365-day year are both derived from the same day count, so they do not land on the same boundaries.
 - There is no lint or format script. `npm test` and `npm run typecheck` are the checks.

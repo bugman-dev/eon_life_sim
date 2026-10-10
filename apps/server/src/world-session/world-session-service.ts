@@ -1,6 +1,8 @@
+import type { WorldMapRepository } from "../persistence/world-map-repository.js";
 import type { WorldSessionRecord, WorldSessionRepository } from "../persistence/world-session-repository.js";
 import { clockFromTick } from "../simulation/clock.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
+import { generateWorld, GenerationError } from "../world/generate.js";
 
 export class ServiceError extends Error {
   readonly code: string;
@@ -15,25 +17,41 @@ export class ServiceError extends Error {
 export class WorldSessionService {
   constructor(
     private readonly repository: WorldSessionRepository,
+    private readonly maps: WorldMapRepository,
     private readonly runtime: SimulationRuntime,
     private readonly tickRate: number,
     private readonly gameSecondsPerTick: number,
   ) {}
 
   async create(input: { name: string; seed?: number }): Promise<WorldSessionRecord> {
+    if (input.seed !== undefined && !Number.isSafeInteger(input.seed)) {
+      throw new ServiceError("invalid_seed", "Seed must be a whole number.");
+    }
+    const seed = input.seed === undefined ? randomSeed() : input.seed;
+    let world;
+    try {
+      world = generateWorld({ seed: BigInt(seed) });
+    } catch (error) {
+      const message = error instanceof GenerationError ? error.message : "World generation failed.";
+      throw new ServiceError("generation_failed", message);
+    }
+
     const clock = clockFromTick(0n, this.gameSecondsPerTick);
-    return this.repository.insert({
-      id: crypto.randomUUID(),
-      name: input.name.trim(),
-      status: "paused",
-      simulationTick: 0n,
-      gameDay: clock.day,
-      gameHour: clock.hour,
-      gameMinute: clock.minute,
-      gameSecond: clock.second,
-      tickRate: this.tickRate,
-      seed: input.seed === undefined ? null : BigInt(input.seed),
-    });
+    return this.maps.saveNewWorld(
+      {
+        id: crypto.randomUUID(),
+        name: input.name.trim(),
+        status: "paused",
+        simulationTick: 0n,
+        gameDay: clock.day,
+        gameHour: clock.hour,
+        gameMinute: clock.minute,
+        gameSecond: clock.second,
+        tickRate: this.tickRate,
+        seed: BigInt(seed),
+      },
+      world,
+    );
   }
 
   async get(worldId: string): Promise<WorldSessionRecord> {
@@ -60,4 +78,10 @@ export class WorldSessionService {
   async resume(worldId: string): Promise<WorldSessionRecord> {
     return this.start(worldId);
   }
+}
+
+function randomSeed() {
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return bytes[0] ?? 1;
 }

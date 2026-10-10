@@ -484,6 +484,7 @@
 .eon-viewport-canvas {
   position: absolute;
   inset: 0;
+  cursor: grab;
 }
 
 .eon .eon-viewport canvas {
@@ -501,6 +502,7 @@
   margin: 0;
   transform: translate(-50%, -50%);
   color: #526277;
+  pointer-events: none;
 }
 
 .eon-stats,

@@ -42,7 +42,7 @@ export interface WorldSessionRepository {
   pauseAllRunning(): Promise<void>;
 }
 
-type WorldSessionRow = {
+export type WorldSessionRow = {
   id: string;
   name: string;
   status: string;
@@ -57,7 +57,7 @@ type WorldSessionRow = {
   updated_at: Date;
 };
 
-const returningColumns =
+export const returningColumns =
   "id, name, status, simulation_tick, game_day, game_hour, game_minute, game_second, tick_rate, seed, created_at, updated_at";
 
 function mapStatus(status: string): WorldSessionStatus {
@@ -67,7 +67,7 @@ function mapStatus(status: string): WorldSessionStatus {
   throw new Error(`Unexpected world session status: ${status}`);
 }
 
-function mapRow(row: WorldSessionRow): WorldSessionRecord {
+export function mapRow(row: WorldSessionRow): WorldSessionRecord {
   return {
     id: row.id,
     name: row.name,

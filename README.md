@@ -1,8 +1,8 @@
 # Life Simulator
 
-Phase 0 is a server-authoritative simulation shell. A browser can connect, create or load a world session, and start, pause, or resume a clock that PostgreSQL remembers. The browser does not own simulation time. No terrain, creatures, or AI are included.
+Phase 1 is a server-authoritative world. A browser can connect, create or load a world session, and start, pause, or resume a clock that PostgreSQL remembers. Creating a world also generates a 128×128 map from its seed. The browser draws that map and does not own simulation time. No creatures or AI are included.
 
-The dashboard around the clock is a reference layout for later phases. Population, tasks, events, and the other cards are hardcoded. The live data is the connection, the world session, and the clock.
+The dashboard around the map is a reference layout for later phases. Population, tasks, events, and the other cards are hardcoded. The live data is the connection, the world session, the generated map, and the clock.
 
 A tick is the simulation counter. By default one tick is one in-game hour. The server derives the day, hour, minute, and second from that counter and stores them with the session. The browser turns those fields into a year and a day-of-year. Seasons are not simulated yet.
 
@@ -48,7 +48,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` currently runs 17 tests across 7 files.
+`npm test` currently runs 23 tests across 10 files.
 
 ## Limits
 
@@ -59,4 +59,4 @@ npm run typecheck
 - Creating a world always creates a new session. Refreshing the browser reloads the last session id saved in the browser.
 - Restarting the server returns every session paused at its last saved tick.
 - Delete World, Step, the side navigation, and the stat cards are present for later work. They do not change the simulation.
-- AI, maps, and living entities are later phases.
+- AI and living entities are later phases. Vegetation and deposits on the map are static features of the generated world.

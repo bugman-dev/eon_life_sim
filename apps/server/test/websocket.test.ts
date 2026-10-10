@@ -44,9 +44,19 @@ describe("websocket session control", () => {
     }
 
     const worldId = created.payload.id;
+    await first.inbox.waitFor((messages) =>
+      messages.some((message) => message.type === "world.map" && message.payload.worldId === worldId),
+    );
+    const createdMap = first.inbox.messages.find((message) => message.type === "world.map");
+    expect(createdMap?.type === "world.map" && createdMap.payload.tiles).toHaveLength(128 * 128);
+    expect(createdMap?.type === "world.map" && createdMap.payload.seed).toMatch(/^\d+$/);
+
     const getId = crypto.randomUUID();
     second.socket.send(JSON.stringify({ type: "world.get", requestId: getId, payload: { worldId } }));
     await second.inbox.waitFor((messages) => messages.some((message) => message.type === "request.ok" && message.requestId === getId));
+    await second.inbox.waitFor((messages) =>
+      messages.some((message) => message.type === "world.map" && message.payload.worldId === worldId),
+    );
 
     first.socket.send("not-json");
     await first.inbox.waitFor((messages) => messages.some((message) => message.type === "request.error"));
@@ -86,6 +96,9 @@ describe("websocket session control", () => {
     await first.inbox.waitFor((messages) => messages.some((message) => message.type === "request.ok" && message.requestId === followUpId));
     expect(first.inbox.messages.length).toBeGreaterThan(afterError);
     expect(context.runtime.getLive(worldId)?.simulationTick).toBe(2n);
+    const clockUpdates = first.inbox.messages.filter((message) => message.type === "simulation.state");
+    expect(clockUpdates.length).toBeGreaterThan(0);
+    expect(clockUpdates.every((message) => message.type === "simulation.state" && !("tiles" in message.payload))).toBe(true);
 
     first.socket.close();
     second.socket.close();

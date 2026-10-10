@@ -80,6 +80,8 @@ export default function Layout({
   onPause,
   onCreate,
   onLoad,
+  mapWidth = null,
+  mapHeight = null,
 }: {
   children: ReactNode;
   session?: WorldSessionState | null;
@@ -90,6 +92,8 @@ export default function Layout({
   onPause?: () => void;
   onCreate: (name: string, seed?: number) => void;
   onLoad: (worldId: string) => void;
+  mapWidth?: number | null;
+  mapHeight?: number | null;
 }) {
   return (
     <div className="eon">
@@ -101,6 +105,8 @@ export default function Layout({
         onPause={onPause}
         onCreate={onCreate}
         onLoad={onLoad}
+        mapWidth={mapWidth}
+        mapHeight={mapHeight}
       />
       <div className="eon-body">
         <NavigationSide />

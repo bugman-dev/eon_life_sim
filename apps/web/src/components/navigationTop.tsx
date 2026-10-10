@@ -29,6 +29,8 @@ export default function NavigationTop({
   onPause,
   onCreate,
   onLoad,
+  mapWidth = null,
+  mapHeight = null,
 }: {
   session: WorldSessionState | null;
   connection?: ConnectionStatus;
@@ -37,6 +39,8 @@ export default function NavigationTop({
   onPause?: () => void;
   onCreate: (name: string, seed?: number) => void;
   onLoad: (worldId: string) => void;
+  mapWidth?: number | null;
+  mapHeight?: number | null;
 }) {
   const { name, seed } = session ?? { name: "", seed: null };
   const running = session?.status === "running";
@@ -65,7 +69,10 @@ export default function NavigationTop({
           <span className="eon-world-thumb" aria-hidden="true" />
           <span>
             <strong>{name || "-"}</strong>
-            <small>Seed: {seed ?? "-"}</small>
+            <small>
+              Seed: {seed ?? "-"}
+              {mapWidth && mapHeight ? ` · ${mapWidth}×${mapHeight}` : ""}
+            </small>
           </span>
           {connection === "connected" ? <CaretIcon /> : <RoundDotIcon />}
         </button>

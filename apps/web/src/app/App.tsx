@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorldSessionState } from "@life-simulator/shared";
+import type { WorldMap, WorldSessionState } from "@life-simulator/shared";
 import {
   LAST_WORLD_STORAGE_KEY,
   SessionClient,
@@ -17,8 +17,11 @@ export function App() {
   const [connection, setConnection] = useState<ConnectionStatus>("connecting");
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null);
   const [session, setSession] = useState<WorldSessionState | null>(null);
+  const [map, setMap] = useState<WorldMap | null>(null);
+  const [mapUnavailable, setMapUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const clientRef = useRef<SessionClient | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let client: SessionClient;
@@ -32,10 +35,32 @@ export function App() {
           setProtocolVersion(message.protocolVersion);
           return;
         }
+        if (message.type === "world.map") {
+          if (sessionIdRef.current && sessionIdRef.current !== message.payload.worldId) {
+            return;
+          }
+          setMap(message.payload);
+          setMapUnavailable(false);
+          return;
+        }
+        if (message.type === "world.map.unavailable") {
+          if (sessionIdRef.current && sessionIdRef.current !== message.worldId) {
+            return;
+          }
+          setMap(null);
+          setMapUnavailable(true);
+          return;
+        }
         if (message.type === "request.ok" || message.type === "world.state") {
+          const changed = sessionIdRef.current !== message.payload.id;
+          sessionIdRef.current = message.payload.id;
           setSession(message.payload);
           localStorage.setItem(LAST_WORLD_STORAGE_KEY, message.payload.id);
           setError(null);
+          if (changed) {
+            setMap(null);
+            setMapUnavailable(false);
+          }
           return;
         }
         if (message.type === "simulation.state") {
@@ -59,7 +84,10 @@ export function App() {
         setError(message.error.message);
         if (message.error.code === "not_found") {
           localStorage.removeItem(LAST_WORLD_STORAGE_KEY);
+          sessionIdRef.current = null;
           setSession(null);
+          setMap(null);
+          setMapUnavailable(false);
         }
       },
     });
@@ -143,9 +171,20 @@ export function App() {
         onPause={() => command("pause")}
         onCreate={createWorld}
         onLoad={loadWorld}
+        mapWidth={map?.width ?? null}
+        mapHeight={map?.height ?? null}
       >
         {error ? <ErrorModal type="Error" message={error} onClose={() => setError(null)} /> : null}
-        <PixiViewport />
+        <PixiViewport
+          map={map}
+          status={
+            session && !map
+              ? mapUnavailable
+                ? "This world has no generated map."
+                : "Loading map"
+              : null
+          }
+        />
       </Layout>
     </main>
   );

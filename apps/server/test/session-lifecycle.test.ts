@@ -25,6 +25,7 @@ describe("world session lifecycle", () => {
     const first = await createApp({ env, scheduler });
     const service = new WorldSessionService(
       first.repository,
+      first.maps,
       first.runtime,
       first.config.tickRate,
       first.config.tickGameSeconds,

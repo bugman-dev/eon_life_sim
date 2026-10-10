@@ -3,6 +3,7 @@ import { loadConfig, type AppConfig } from "./config/env.js";
 import { registerHealthRoutes } from "./http/health.js";
 import { createLogger } from "./observability/logger.js";
 import { createPool } from "./persistence/database.js";
+import { PgWorldMapRepository } from "./persistence/world-map-repository.js";
 import { PgWorldSessionRepository } from "./persistence/world-session-repository.js";
 import { createTimeoutScheduler, SimulationRuntime, type TickScheduler } from "./simulation/runtime.js";
 import { toSimulationState } from "./world-session/state.js";
@@ -18,6 +19,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const logger = createLogger(config.logLevel);
   const pool = await createPool(config.databaseUrl, logger, config.databaseConnectAttempts);
   const repository = new PgWorldSessionRepository(pool);
+  const maps = new PgWorldMapRepository(pool);
   const scheduler = options.scheduler ?? createTimeoutScheduler();
   const hub = new ClientHub();
   const runtime = new SimulationRuntime(
@@ -48,6 +50,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   await registerGateway(app, {
     hub,
     repository,
+    maps,
     runtime,
     tickRate: config.tickRate,
     gameSecondsPerTick: config.tickGameSeconds,
@@ -62,7 +65,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     }
   });
 
-  return { app, config, repository, runtime, scheduler };
+  return { app, config, repository, maps, runtime, scheduler };
 }
 
 export type AppContext = Awaited<ReturnType<typeof createApp>>;

@@ -1,8 +1,9 @@
 import websocket from "@fastify/websocket";
-import { MAX_CLIENT_MESSAGE_BYTES, PROTOCOL_VERSION, type ServerMessage } from "@life-simulator/shared";
+import { MAX_CLIENT_MESSAGE_BYTES, PROTOCOL_VERSION, worldMapSchema, type ServerMessage } from "@life-simulator/shared";
 import type { FastifyInstance } from "fastify";
 import type { RawData, WebSocket } from "ws";
 import type { AppLogger } from "../observability/logger.js";
+import type { WorldMapRepository } from "../persistence/world-map-repository.js";
 import type { WorldSessionRepository } from "../persistence/world-session-repository.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
 import { WorldSessionService } from "../world-session/world-session-service.js";
@@ -40,6 +41,7 @@ export class ClientHub {
 export type GatewayDependencies = {
   hub: ClientHub;
   repository: WorldSessionRepository;
+  maps: WorldMapRepository;
   runtime: SimulationRuntime;
   tickRate: number;
   gameSecondsPerTick: number;
@@ -53,6 +55,7 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
 
   const service = new WorldSessionService(
     deps.repository,
+    deps.maps,
     deps.runtime,
     deps.tickRate,
     deps.gameSecondsPerTick,
@@ -79,6 +82,15 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
     });
   });
 
+  async function sendMap(socket: WebSocket, worldId: string) {
+    const map = await deps.maps.findMap(worldId);
+    if (!map || !worldMapSchema.safeParse(map).success) {
+      send(socket, { type: "world.map.unavailable", worldId });
+      return;
+    }
+    send(socket, { type: "world.map", payload: map });
+  }
+
   async function handleMessage(socket: WebSocket, raw: RawData) {
     const parsed = parseClientMessage(rawToText(raw));
     if (!parsed.ok) {
@@ -98,6 +110,12 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
         deps.hub.publish(response.payload.id, { type: "world.state", payload: response.payload });
       }
       send(socket, response);
+      if (
+        response.type === "request.ok" &&
+        (parsed.message.type === "world.create" || parsed.message.type === "world.get")
+      ) {
+        await sendMap(socket, response.payload.id);
+      }
     } catch (error) {
       deps.logger.error(
         { message: error instanceof Error ? error.message : "Unknown command failure" },

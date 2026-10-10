@@ -1,6 +1,27 @@
 export { MAX_CLIENT_MESSAGE_BYTES, PROTOCOL_VERSION } from "./protocol/messages.js";
 export { clientMessageSchema, type ClientMessage } from "./schemas/client-message.js";
 export {
+  DEFAULT_WORLD_SIZE,
+  MAX_WORLD_SIZE,
+  MIN_WORLD_SIZE,
+  WORLD_GENERATION_VERSION,
+  WORLD_TILE_SIZE,
+  depositTypeSchema,
+  soilTypeSchema,
+  terrainTypeSchema,
+  vegetationTypeSchema,
+  waterTypeSchema,
+  worldMapSchema,
+  worldTileSchema,
+  type DepositType,
+  type SoilType,
+  type TerrainType,
+  type VegetationType,
+  type WaterType,
+  type WorldMap,
+  type WorldTile,
+} from "./schemas/world-map.js";
+export {
   serverMessageSchema,
   simulationStateSchema,
   worldSessionStateSchema,

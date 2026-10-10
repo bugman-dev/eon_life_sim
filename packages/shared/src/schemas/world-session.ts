@@ -1,32 +1,37 @@
 import { z } from "zod";
+import { worldMapSchema } from "./world-map.js";
 
 export const worldSessionStatusSchema = z.enum(["paused", "running"]);
 
-export const worldSessionStateSchema = z.object({
-  id: z.string().uuid(),
-  name: z.string(),
-  status: worldSessionStatusSchema,
-  simulationTick: z.string().regex(/^\d+$/),
-  gameDay: z.number().int().positive(),
-  gameHour: z.number().int().min(0).max(23),
-  gameMinute: z.number().int().min(0).max(59),
-  gameSecond: z.number().int().min(0).max(59),
-  tickRate: z.number().int().positive(),
-  seed: z.string().regex(/^-?\d+$/).nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
+export const worldSessionStateSchema = z
+  .object({
+    id: z.string().uuid(),
+    name: z.string(),
+    status: worldSessionStatusSchema,
+    simulationTick: z.string().regex(/^\d+$/),
+    gameDay: z.number().int().positive(),
+    gameHour: z.number().int().min(0).max(23),
+    gameMinute: z.number().int().min(0).max(59),
+    gameSecond: z.number().int().min(0).max(59),
+    tickRate: z.number().int().positive(),
+    seed: z.string().regex(/^-?\d+$/).nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+  })
+  .strict();
 
-export const simulationStateSchema = z.object({
-  worldId: z.string().uuid(),
-  status: worldSessionStatusSchema,
-  simulationTick: z.string().regex(/^\d+$/),
-  gameDay: z.number().int().positive(),
-  gameHour: z.number().int().min(0).max(23),
-  gameMinute: z.number().int().min(0).max(59),
-  gameSecond: z.number().int().min(0).max(59),
-  tickRate: z.number().int().positive(),
-});
+export const simulationStateSchema = z
+  .object({
+    worldId: z.string().uuid(),
+    status: worldSessionStatusSchema,
+    simulationTick: z.string().regex(/^\d+$/),
+    gameDay: z.number().int().positive(),
+    gameHour: z.number().int().min(0).max(23),
+    gameMinute: z.number().int().min(0).max(59),
+    gameSecond: z.number().int().min(0).max(59),
+    tickRate: z.number().int().positive(),
+  })
+  .strict();
 
 export const serverMessageSchema = z.discriminatedUnion("type", [
   z.object({
@@ -54,6 +59,16 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("simulation.state"),
     payload: simulationStateSchema,
   }),
+  z.object({
+    type: z.literal("world.map"),
+    payload: worldMapSchema,
+  }),
+  z
+    .object({
+      type: z.literal("world.map.unavailable"),
+      worldId: z.string().uuid(),
+    })
+    .strict(),
 ]);
 
 export type WorldSessionStatus = z.infer<typeof worldSessionStatusSchema>;
