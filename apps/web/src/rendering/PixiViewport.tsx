@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorldMap } from "@life-simulator/shared";
 import type { Container } from "pixi.js";
+import grassUrl from "../assets/images/grass.png";
 
 const GRID_SIZE = 250;
 const TILE_WIDTH = 64;
@@ -136,44 +137,62 @@ export function PixiViewport({ map: _map, status }: { map: WorldMap | null; stat
     }
 
     for (const child of world.removeChildren()) {
-      child.destroy();
+      child.destroy({ children: true, texture: false, textureSource: false });
     }
 
     let cancelled = false;
     void (async () => {
-      const pixi = await import("pixi.js");
-      if (cancelled || worldRef.current !== world) {
-        return;
-      }
+      try {
+        const pixi = await import("pixi.js");
+        const texture = await pixi.Assets.load<import("pixi.js").Texture>(grassUrl);
+        if (cancelled || worldRef.current !== world) {
+          return;
+        }
 
-      const top = isoPoint(0, 0);
-      const right = isoPoint(GRID_SIZE, 0);
-      const bottom = isoPoint(GRID_SIZE, GRID_SIZE);
-      const left = isoPoint(0, GRID_SIZE);
-      const ground = new pixi.Graphics();
-      ground.poly([top.x, top.y, right.x, right.y, bottom.x, bottom.y, left.x, left.y]);
-      ground.fill(0xb7d99a);
-      world.addChild(ground);
+        const scale = TILE_WIDTH / texture.width;
+        const skirt = TILE_WIDTH * (texture.height / texture.width) - TILE_HEIGHT;
+        const layer = new pixi.ParticleContainer({
+          texture,
+          dynamicProperties: {
+            position: false,
+            rotation: false,
+            vertex: false,
+            uvs: false,
+            color: false,
+          },
+        });
+        layer.boundsArea = new pixi.Rectangle(0, 0, GRID_SIZE * TILE_WIDTH, GRID_SIZE * TILE_HEIGHT + skirt);
 
-      const grid = new pixi.Graphics();
-      for (let x = 0; x <= GRID_SIZE; x += 1) {
-        const start = isoPoint(x, 0);
-        const end = isoPoint(x, GRID_SIZE);
-        grid.moveTo(start.x, start.y);
-        grid.lineTo(end.x, end.y);
-      }
-      for (let y = 0; y <= GRID_SIZE; y += 1) {
-        const start = isoPoint(0, y);
-        const end = isoPoint(GRID_SIZE, y);
-        grid.moveTo(start.x, start.y);
-        grid.lineTo(end.x, end.y);
-      }
-      grid.stroke({ width: 1, color: 0x5f7d52, pixelLine: true });
-      world.addChild(grid);
+        for (let sum = 0; sum < GRID_SIZE * 2 - 1; sum += 1) {
+          const xStart = Math.max(0, sum - (GRID_SIZE - 1));
+          const xEnd = Math.min(sum, GRID_SIZE - 1);
+          for (let x = xStart; x <= xEnd; x += 1) {
+            const y = sum - x;
+            const point = isoPoint(x, y);
+            layer.particleChildren.push(
+              new pixi.Particle({
+                texture,
+                x: point.x,
+                y: point.y,
+                scaleX: scale,
+                scaleY: scale,
+                anchorX: 0.5,
+                anchorY: 0,
+              }),
+            );
+          }
+        }
+        layer.update();
+        world.addChild(layer);
 
-      viewRef.current.pixelWidth = GRID_SIZE * TILE_WIDTH;
-      viewRef.current.pixelHeight = GRID_SIZE * TILE_HEIGHT;
-      fitMap(host, world, viewRef.current);
+        viewRef.current.pixelWidth = GRID_SIZE * TILE_WIDTH;
+        viewRef.current.pixelHeight = GRID_SIZE * TILE_HEIGHT + skirt;
+        fitMap(host, world, viewRef.current);
+      } catch (caught) {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : "Grass texture failed to load.");
+        }
+      }
     })();
 
     return () => {
