@@ -96,6 +96,99 @@
   min-width: 210px;
 }
 
+.eon-world-menu {
+  position: relative;
+}
+
+.eon-world-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 100%;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.eon .eon-world-popover button {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.eon .eon-world-popover button:hover {
+  background: var(--blue-soft);
+}
+
+.eon-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(29, 39, 54, 0.45);
+}
+
+.eon-modal-card {
+  width: min(480px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.eon-modal-card > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 0;
+}
+
+.eon-modal-card > header h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.eon .eon-modal-card > header button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 20px;
+}
+
+.eon .eon-modal-card section button {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+}
+
+.eon .eon-modal-card section button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.eon .eon-modal-card .create-world-info {
+  display: block;
+  margin: 12px 0 0;
+  color: #7d8b9e;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .eon-world span,
 .eon-clock span,
 .eon-year-chip span {

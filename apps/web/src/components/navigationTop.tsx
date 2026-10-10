@@ -10,7 +10,9 @@ import {
   SunIcon,
 } from "../assets/icons";
 import type { WorldSessionState } from "@life-simulator/shared";
+import { useState } from "react";
 import { ConnectionStatus } from "../networking/socket";
+import CreateWorld from "../modals/createWorld";
 
 const DAYS_PER_YEAR = 365;
 
@@ -19,15 +21,21 @@ export default function NavigationTop({
   connection,
   onPlay,
   onPause,
+  onCreate,
+  onLoad,
 }: {
   session: WorldSessionState | null;
   connection?: ConnectionStatus;
   onPlay?: () => void;
   onPause?: () => void;
+  onCreate: (name: string, seed?: number) => void;
+  onLoad: (worldId: string) => void;
 }) {
   const { name, seed } = session ?? { name: "", seed: null };
   const running = session?.status === "running";
   const disconnected = connection !== "connected";
+  const [worldMenuOpen, setWorldMenuOpen] = useState(false);
+  const [createWorldOpen, setCreateWorldOpen] = useState(false);
 
   const elapsedDays = Math.max(session?.gameDay ?? 1, 1) - 1;
   const years = Math.floor(elapsedDays / DAYS_PER_YEAR) + 1;
@@ -38,14 +46,39 @@ export default function NavigationTop({
         <span>Living World Simulator</span>
       </div>
 
-      <button type="button" className="eon-world">
-        <span className="eon-world-thumb" aria-hidden="true" />
-        <span>
-          <strong>{name || "-"}</strong>
-          <small>Seed: {seed ?? "-"}</small>
-        </span>
-        {connection === "connected" ? <CaretIcon /> : <RoundDotIcon />}
-      </button>
+      <div className="eon-world-menu">
+        <button
+          type="button"
+          className="eon-world"
+          aria-expanded={worldMenuOpen}
+          aria-haspopup="menu"
+          onClick={() => setWorldMenuOpen((open) => !open)}
+        >
+          <span className="eon-world-thumb" aria-hidden="true" />
+          <span>
+            <strong>{name || "-"}</strong>
+            <small>Seed: {seed ?? "-"}</small>
+          </span>
+          {connection === "connected" ? <CaretIcon /> : <RoundDotIcon />}
+        </button>
+        {worldMenuOpen ? (
+          <div className="eon-world-popover" role="menu">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setWorldMenuOpen(false);
+                setCreateWorldOpen(true);
+              }}
+            >
+              Create World
+            </button>
+            <button type="button" role="menuitem">
+              Delete Current World
+            </button>
+          </div>
+        ) : null}
+      </div>
 
       <label className="eon-search">
         <SearchIcon />
@@ -110,6 +143,15 @@ export default function NavigationTop({
         </button>
         <span className="eon-avatar">T</span>
       </div>
+      {createWorldOpen ? (
+        <CreateWorld
+          session={session}
+          connected={connection === "connected"}
+          onCreate={onCreate}
+          onLoad={onLoad}
+          onClose={() => setCreateWorldOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }

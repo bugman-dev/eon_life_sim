@@ -77,6 +77,8 @@ export default function Layout({
   onToggleSimulation,
   onPlay,
   onPause,
+  onCreate,
+  onLoad,
 }: {
   children: ReactNode;
   session?: WorldSessionState | null;
@@ -84,6 +86,8 @@ export default function Layout({
   onToggleSimulation?: () => void;
   onPlay?: () => void;
   onPause?: () => void;
+  onCreate: (name: string, seed?: number) => void;
+  onLoad: (worldId: string) => void;
 }) {
   return (
     <div className="eon">
@@ -92,6 +96,8 @@ export default function Layout({
         connection={connection}
         onPlay={onPlay}
         onPause={onPause}
+        onCreate={onCreate}
+        onLoad={onLoad}
       />
       <div className="eon-body">
         <NavigationSide />

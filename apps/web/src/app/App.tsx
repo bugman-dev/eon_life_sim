@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorldSessionState } from "@life-simulator/shared";
 import { ConnectionPanel } from "../features/connection/ConnectionPanel";
-import { WorldSessionPanel } from "../features/world-session/WorldSessionPanel";
 import {
   LAST_WORLD_STORAGE_KEY,
   SessionClient,
@@ -137,8 +136,12 @@ export function App() {
                 : "resume",
           )
         }
-        onPlay={() => command(session?.simulationTick === "0" ? "start" : "resume")}
+        onPlay={() =>
+          command(session?.simulationTick === "0" ? "start" : "resume")
+        }
         onPause={() => command("pause")}
+        onCreate={createWorld}
+        onLoad={loadWorld}
       >
         <header>
           <p>Phase 0</p>
@@ -149,12 +152,7 @@ export function App() {
           status={connection}
           protocolVersion={protocolVersion}
         />
-        <WorldSessionPanel
-          session={session}
-          connected={connection === "connected"}
-          onCreate={createWorld}
-          onLoad={loadWorld}
-        />
+
         <PixiViewport />
       </Layout>
     </main>
