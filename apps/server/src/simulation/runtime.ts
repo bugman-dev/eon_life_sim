@@ -94,6 +94,19 @@ export class SimulationRuntime {
     });
   }
 
+  async forget(worldId: string): Promise<void> {
+    await this.enqueue(worldId, async () => {
+      const loop = this.loops.get(worldId);
+      if (loop) {
+        loop.running = false;
+        loop.handle?.cancel();
+        loop.handle = null;
+        this.loops.delete(worldId);
+      }
+      this.live.delete(worldId);
+    });
+  }
+
   async stopAll(): Promise<void> {
     const running = [...this.live.values()].map((session) => ({ ...session }));
     for (const session of running) {

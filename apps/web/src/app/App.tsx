@@ -51,6 +51,18 @@ export function App() {
           setMapUnavailable(true);
           return;
         }
+        if (message.type === "world.deleted") {
+          if (sessionIdRef.current !== message.worldId) {
+            return;
+          }
+          localStorage.removeItem(LAST_WORLD_STORAGE_KEY);
+          sessionIdRef.current = null;
+          setSession(null);
+          setMap(null);
+          setMapUnavailable(false);
+          setError(null);
+          return;
+        }
         if (message.type === "request.ok" || message.type === "world.state") {
           const changed = sessionIdRef.current !== message.payload.id;
           sessionIdRef.current = message.payload.id;
@@ -123,6 +135,17 @@ export function App() {
     }
   }
 
+  function deleteWorld() {
+    const client = requireClient();
+    if (!client || !session) {
+      setError("Create or load a world first.");
+      return;
+    }
+    if (!client.deleteWorld(session.id)) {
+      setError("Not connected to the server.");
+    }
+  }
+
   function loadWorld(worldId: string) {
     const client = requireClient();
     if (!client) {
@@ -171,6 +194,7 @@ export function App() {
         onPause={() => command("pause")}
         onCreate={createWorld}
         onLoad={loadWorld}
+        onDelete={deleteWorld}
         mapWidth={map?.width ?? null}
         mapHeight={map?.height ?? null}
       >

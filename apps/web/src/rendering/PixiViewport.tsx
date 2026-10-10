@@ -25,7 +25,7 @@ function isoPoint(gridX: number, gridY: number): Point {
   };
 }
 
-export function PixiViewport({ map: _map, status }: { map: WorldMap | null; status: string | null }) {
+export function PixiViewport({ map, status }: { map: WorldMap | null; status: string | null }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<Container | null>(null);
   const viewRef = useRef<ViewState>({ pixelWidth: 0, pixelHeight: 0, fit: 1 });
@@ -139,6 +139,10 @@ export function PixiViewport({ map: _map, status }: { map: WorldMap | null; stat
     for (const child of world.removeChildren()) {
       child.destroy({ children: true, texture: false, textureSource: false });
     }
+    if (!map) {
+      viewRef.current = { pixelWidth: 0, pixelHeight: 0, fit: 1 };
+      return;
+    }
 
     let cancelled = false;
     void (async () => {
@@ -198,7 +202,7 @@ export function PixiViewport({ map: _map, status }: { map: WorldMap | null; stat
     return () => {
       cancelled = true;
     };
-  }, [ready]);
+  }, [map, ready]);
 
   return (
     <section className="eon-viewport" aria-label="World view">

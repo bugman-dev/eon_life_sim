@@ -26,11 +26,12 @@ Commands, each with a `requestId`:
 
 - `world.create` with `name` and an optional `seed`
 - `world.get` with `worldId`
+- `world.delete` with `worldId`
 - `simulation.start`
 - `simulation.pause`
 - `simulation.resume`
 
-Every command receives `request.ok` with the world session, or `request.error` with a code and a message. Clients that have loaded a session also receive `world.state` and, while the clock moves, `simulation.state`. Create and load also send one map message to that socket only:
+Create, load, start, pause, and resume receive `request.ok` with the world session, or `request.error` with a code and a message. `world.delete` replies with `world.deleted` and removes the session. Generation, tiles, and deposits follow that row through `ON DELETE CASCADE`. Clients that have loaded a session also receive `world.state` and, while the clock moves, `simulation.state`. Create and load also send one map message to that socket only:
 
 - `world.map` with the world id, seed, generation version, dimensions, and tiles
 - `world.map.unavailable` when the session has no generated map

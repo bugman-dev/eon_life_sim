@@ -36,6 +36,10 @@ export class ClientHub {
       }
     }
   }
+
+  drop(worldId: string) {
+    this.rooms.delete(worldId);
+  }
 }
 
 export type GatewayDependencies = {
@@ -109,6 +113,10 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
 
     try {
       const response = await dispatch(parsed.message, service);
+      if (response.type === "world.deleted") {
+        deps.hub.publish(response.worldId, response);
+        deps.hub.drop(response.worldId);
+      }
       if (response.type === "request.ok") {
         deps.hub.subscribe(response.payload.id, socket);
         deps.hub.publish(response.payload.id, { type: "world.state", payload: response.payload });

@@ -40,6 +40,7 @@ export interface WorldSessionRepository {
     >,
   ): Promise<WorldSessionRecord>;
   pauseAllRunning(): Promise<void>;
+  deleteById(id: string): Promise<boolean>;
 }
 
 export type WorldSessionRow = {
@@ -163,5 +164,10 @@ export class PgWorldSessionRepository implements WorldSessionRepository {
        SET status = 'paused', updated_at = now()
        WHERE status = 'running'`,
     );
+  }
+
+  async deleteById(id: string): Promise<boolean> {
+    const result = await this.pool.query("DELETE FROM world_sessions WHERE id = $1", [id]);
+    return (result.rowCount ?? 0) > 0;
   }
 }

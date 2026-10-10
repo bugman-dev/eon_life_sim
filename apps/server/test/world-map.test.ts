@@ -106,4 +106,46 @@ describe("world map persistence", () => {
     expect(loaded?.tiles).toHaveLength(129 * 8);
     await context.app.close();
   });
+
+  it("removes the session, map, tiles, and deposits", async () => {
+    const scheduler = new ManualScheduler();
+    const context = await createApp({ env: testProcessEnv(databaseUrl), scheduler });
+    const service = new WorldSessionService(
+      context.repository,
+      context.maps,
+      context.runtime,
+      context.config.tickRate,
+      context.config.tickGameSeconds,
+      context.config.worldWidth,
+      context.config.worldHeight,
+    );
+
+    const created = await service.create({ name: "Doomed", seed: 3 });
+    await service.start(created.id);
+    expect(scheduler.pending()).toBe(1);
+    await service.delete(created.id);
+
+    expect(scheduler.pending()).toBe(0);
+    expect(context.runtime.getLive(created.id)).toBeNull();
+    expect(await context.repository.findById(created.id)).toBeNull();
+    expect(await context.maps.findMap(created.id)).toBeNull();
+
+    const pool = new Pool({ connectionString: databaseUrl });
+    try {
+      const counts = await pool.query<{ sessions: number; generations: number; tiles: number; deposits: number }>(
+        `SELECT
+           (SELECT count(*)::int FROM world_sessions WHERE id = $1) AS sessions,
+           (SELECT count(*)::int FROM world_generation WHERE world_id = $1) AS generations,
+           (SELECT count(*)::int FROM world_tiles WHERE world_id = $1) AS tiles,
+           (SELECT count(*)::int FROM world_resource_deposits WHERE world_id = $1) AS deposits`,
+        [created.id],
+      );
+      expect(counts.rows[0]).toEqual({ sessions: 0, generations: 0, tiles: 0, deposits: 0 });
+    } finally {
+      await pool.end();
+    }
+
+    await expect(service.delete(created.id)).rejects.toThrow(/not found/i);
+    await context.app.close();
+  });
 });

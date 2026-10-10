@@ -25,6 +25,13 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
     .strict(),
   z
     .object({
+      type: z.literal("world.delete"),
+      requestId,
+      payload: z.object({ worldId }).strict(),
+    })
+    .strict(),
+  z
+    .object({
       type: z.literal("simulation.start"),
       requestId,
       payload: z.object({ worldId }).strict(),

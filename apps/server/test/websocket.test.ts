@@ -104,4 +104,45 @@ describe("websocket session control", () => {
     second.socket.close();
     await context.app.close();
   });
+
+  it("tells every connected client when a world is deleted", async () => {
+    const scheduler = new ManualScheduler();
+    const context = await createApp({ env: testProcessEnv(databaseUrl), scheduler });
+    await context.app.ready();
+
+    const first = await openSocket(context.app);
+    const second = await openSocket(context.app);
+    const createId = crypto.randomUUID();
+    first.socket.send(JSON.stringify({ type: "world.create", requestId: createId, payload: { name: "Temporary" } }));
+    await first.inbox.waitFor((messages) => messages.some((message) => message.type === "request.ok" && message.requestId === createId));
+    const created = first.inbox.messages.find((message) => message.type === "request.ok" && message.requestId === createId);
+    if (!created || created.type !== "request.ok") {
+      throw new Error("Create did not return a session.");
+    }
+    const worldId = created.payload.id;
+
+    const getId = crypto.randomUUID();
+    second.socket.send(JSON.stringify({ type: "world.get", requestId: getId, payload: { worldId } }));
+    await second.inbox.waitFor((messages) => messages.some((message) => message.type === "request.ok" && message.requestId === getId));
+
+    const startId = crypto.randomUUID();
+    first.socket.send(JSON.stringify({ type: "simulation.start", requestId: startId, payload: { worldId } }));
+    await first.inbox.waitFor((messages) => messages.some((message) => message.type === "request.ok" && message.requestId === startId));
+    expect(scheduler.pending()).toBe(1);
+
+    const deleteId = crypto.randomUUID();
+    first.socket.send(JSON.stringify({ type: "world.delete", requestId: deleteId, payload: { worldId } }));
+    await first.inbox.waitFor((messages) => messages.some((message) => message.type === "world.deleted" && message.worldId === worldId));
+    await second.inbox.waitFor((messages) => messages.some((message) => message.type === "world.deleted" && message.worldId === worldId));
+    expect(scheduler.pending()).toBe(0);
+    expect(await context.repository.findById(worldId)).toBeNull();
+
+    const missingId = crypto.randomUUID();
+    second.socket.send(JSON.stringify({ type: "world.get", requestId: missingId, payload: { worldId } }));
+    await second.inbox.waitFor((messages) => messages.some((message) => message.type === "request.error" && message.requestId === missingId));
+
+    first.socket.close();
+    second.socket.close();
+    await context.app.close();
+  });
 });

@@ -31,6 +31,7 @@ The top bar should say **Connected**, **Protocol 1**, and **Phase 0**. If it sta
 7. Click pause to stop it. Play again to continue from the same time. The highlighted transport button shows whether the world is running or paused.
 8. Refresh the page. The same world and the same map load again.
 9. Open the site in a second tab. Both views follow the same clock and show the same map.
+10. Open the world menu and click **Delete Current World**. The loaded world's session, map, tiles, and deposits are deleted. Every open view of that world clears, and a refresh does not bring it back.
 
 The timeline shows the running or paused state, the day and hour, how much of the current day has passed, and how much of a 365-day year has passed. The header shows **Year** and **Day** from that same clock. The browser console also prints the tick and each clock field when they change.
 
@@ -48,7 +49,6 @@ A world saved before maps existed opens with the message **This world has no gen
 
 These controls and cards are kept as the future layout. They do not talk to the server:
 
-- Delete Current World
 - Step, and the **1x** speed label
 - Notifications, Settings, and the side navigation
 - Population, food, wood, stone, animals, and happiness

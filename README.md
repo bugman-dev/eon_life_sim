@@ -48,7 +48,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` currently runs 25 tests across 10 files.
+`npm test` currently runs 28 tests across 10 files.
 
 ## Limits
 
@@ -58,5 +58,5 @@ npm run typecheck
 - Tick progress is stored every `PERSIST_EVERY_TICKS` ticks, and again on pause or shutdown. A crash can drop the unsaved ticks since the last write.
 - Creating a world always creates a new session. Refreshing the browser reloads the last session id saved in the browser.
 - Restarting the server returns every session paused at its last saved tick.
-- Delete World, Step, the side navigation, and the stat cards are present for later work. They do not change the simulation.
+- Delete Current World removes that world's session, map, tiles, and deposits. Step, the side navigation, and the stat cards are present for later work. They do not change the simulation.
 - AI and living entities are later phases. Vegetation and deposits on the map are static features of the generated world.

@@ -22,6 +22,14 @@ export class SessionClient {
     });
   }
 
+  deleteWorld(worldId: string) {
+    return this.send({
+      type: "world.delete",
+      requestId: crypto.randomUUID(),
+      payload: { worldId },
+    });
+  }
+
   start(worldId: string) {
     return this.send({ type: "simulation.start", requestId: crypto.randomUUID(), payload: { worldId } });
   }

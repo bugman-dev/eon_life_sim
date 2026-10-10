@@ -29,6 +29,7 @@ export default function NavigationTop({
   onPause,
   onCreate,
   onLoad,
+  onDelete,
   mapWidth = null,
   mapHeight = null,
 }: {
@@ -39,6 +40,7 @@ export default function NavigationTop({
   onPause?: () => void;
   onCreate: (name: string, seed?: number) => void;
   onLoad: (worldId: string) => void;
+  onDelete: () => void;
   mapWidth?: number | null;
   mapHeight?: number | null;
 }) {
@@ -88,7 +90,15 @@ export default function NavigationTop({
             >
               Create World
             </button>
-            <button type="button" role="menuitem">
+            <button
+              type="button"
+              role="menuitem"
+              disabled={!session || disconnected}
+              onClick={() => {
+                setWorldMenuOpen(false);
+                onDelete();
+              }}
+            >
               Delete Current World
             </button>
           </div>

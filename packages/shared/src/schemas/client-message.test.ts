@@ -26,6 +26,23 @@ describe("client messages", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("accepts a world delete command", () => {
+    expect(
+      clientMessageSchema.safeParse({
+        type: "world.delete",
+        requestId,
+        payload: { worldId },
+      }).success,
+    ).toBe(true);
+    expect(
+      serverMessageSchema.safeParse({
+        type: "world.deleted",
+        requestId,
+        worldId,
+      }).success,
+    ).toBe(true);
+  });
+
   it("rejects a missing name and a fractional seed", () => {
     expect(
       clientMessageSchema.safeParse({

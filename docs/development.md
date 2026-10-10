@@ -82,14 +82,13 @@ These files are intentionally static. Later phases should replace the hardcoded 
 - `apps/web/src/components/recentEvents.tsx`
 - `apps/web/src/components/navigationSide.tsx`
 - The Step, notifications, and settings buttons in `navigationTop.tsx`
-- Delete Current World in the world menu
 
 `apps/web/src/features/` still holds the first connection, session, and clock panels. The dashboard replaced them. They remain as the earlier control layout.
 
 Live UI:
 
 - Connection, protocol, and phase in the top bar
-- Create and load in `apps/web/src/modals/createWorld.tsx`
+- Create, load, and delete in the world menu
 - Play and pause in the top bar and in `eonTimeline.tsx`
 - Errors in `apps/web/src/modals/errorModal.tsx`
 - The generated map in `apps/web/src/rendering/PixiViewport.tsx`
@@ -98,7 +97,7 @@ The last world id is stored in the browser under `life-simulator:last-world-id`.
 
 ## What was verified
 
-- `npm test` on 10 October 2026 — 10 files, 25 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, deterministic world generation, map persistence and rollback, configured map size, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock without receiving the map on a tick.
+- `npm test` on 10 October 2026 — 10 files, 28 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, deterministic world generation, map persistence and rollback, configured map size, world deletion, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock without receiving the map on a tick.
 - `npm run typecheck`
 - `npm run db:migrate` applies `001_world_sessions.sql`, `002_world_clock.sql`, and `003_world_map.sql` on a database that does not already have them.
 - A live server at `http://127.0.0.1:3000` created a world, advanced the tick for two clients, paused, and returned that same paused tick after a new connection.

@@ -80,6 +80,7 @@ export default function Layout({
   onPause,
   onCreate,
   onLoad,
+  onDelete,
   mapWidth = null,
   mapHeight = null,
 }: {
@@ -92,6 +93,7 @@ export default function Layout({
   onPause?: () => void;
   onCreate: (name: string, seed?: number) => void;
   onLoad: (worldId: string) => void;
+  onDelete: () => void;
   mapWidth?: number | null;
   mapHeight?: number | null;
 }) {
@@ -105,6 +107,7 @@ export default function Layout({
         onPause={onPause}
         onCreate={onCreate}
         onLoad={onLoad}
+        onDelete={onDelete}
         mapWidth={mapWidth}
         mapHeight={mapHeight}
       />

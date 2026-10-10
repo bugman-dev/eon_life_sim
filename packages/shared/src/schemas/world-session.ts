@@ -69,6 +69,13 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
       worldId: z.string().uuid(),
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("world.deleted"),
+      requestId: z.string().uuid(),
+      worldId: z.string().uuid(),
+    })
+    .strict(),
 ]);
 
 export type WorldSessionStatus = z.infer<typeof worldSessionStatusSchema>;

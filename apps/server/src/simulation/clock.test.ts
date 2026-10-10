@@ -50,6 +50,10 @@ class MemoryRepository implements WorldSessionRepository {
       }
     }
   }
+
+  async deleteById(id: string): Promise<boolean> {
+    return this.rows.delete(id);
+  }
 }
 
 async function createPausedSession(repository: MemoryRepository): Promise<WorldSessionRecord> {

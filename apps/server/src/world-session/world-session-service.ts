@@ -80,6 +80,14 @@ export class WorldSessionService {
   async resume(worldId: string): Promise<WorldSessionRecord> {
     return this.start(worldId);
   }
+
+  async delete(worldId: string): Promise<void> {
+    await this.runtime.forget(worldId);
+    const removed = await this.repository.deleteById(worldId);
+    if (!removed) {
+      throw new ServiceError("not_found", "World session was not found.");
+    }
+  }
 }
 
 function randomSeed() {
