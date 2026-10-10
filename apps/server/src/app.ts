@@ -54,6 +54,8 @@ export async function createApp(options: CreateAppOptions = {}) {
     runtime,
     tickRate: config.tickRate,
     gameSecondsPerTick: config.tickGameSeconds,
+    worldWidth: config.worldWidth,
+    worldHeight: config.worldHeight,
     logger,
   });
 

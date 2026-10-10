@@ -28,6 +28,8 @@ describe("world map persistence", () => {
       context.runtime,
       context.config.tickRate,
       context.config.tickGameSeconds,
+      context.config.worldWidth,
+      context.config.worldHeight,
     );
 
     const created = await service.create({ name: "Mapped", seed: 11 });
@@ -79,6 +81,29 @@ describe("world map persistence", () => {
     ).rejects.toThrow();
     expect(await context.repository.findById(failingId)).toBeNull();
 
+    await context.app.close();
+  });
+
+  it("creates a world at the configured width and height", async () => {
+    const context = await createApp({
+      env: { ...testProcessEnv(databaseUrl), WORLD_WIDTH: "129", WORLD_HEIGHT: "8" },
+      scheduler: new ManualScheduler(),
+    });
+    const service = new WorldSessionService(
+      context.repository,
+      context.maps,
+      context.runtime,
+      context.config.tickRate,
+      context.config.tickGameSeconds,
+      context.config.worldWidth,
+      context.config.worldHeight,
+    );
+
+    const created = await service.create({ name: "Small", seed: 9 });
+    const loaded = await context.maps.findMap(created.id);
+    expect(loaded?.width).toBe(129);
+    expect(loaded?.height).toBe(8);
+    expect(loaded?.tiles).toHaveLength(129 * 8);
     await context.app.close();
   });
 });

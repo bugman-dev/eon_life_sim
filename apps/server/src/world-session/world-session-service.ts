@@ -21,6 +21,8 @@ export class WorldSessionService {
     private readonly runtime: SimulationRuntime,
     private readonly tickRate: number,
     private readonly gameSecondsPerTick: number,
+    private readonly worldWidth: number,
+    private readonly worldHeight: number,
   ) {}
 
   async create(input: { name: string; seed?: number }): Promise<WorldSessionRecord> {
@@ -30,7 +32,7 @@ export class WorldSessionService {
     const seed = input.seed === undefined ? randomSeed() : input.seed;
     let world;
     try {
-      world = generateWorld({ seed: BigInt(seed) });
+      world = generateWorld({ seed: BigInt(seed), width: this.worldWidth, height: this.worldHeight });
     } catch (error) {
       const message = error instanceof GenerationError ? error.message : "World generation failed.";
       throw new ServiceError("generation_failed", message);

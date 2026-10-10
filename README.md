@@ -1,6 +1,6 @@
 # Life Simulator
 
-Phase 1 is a server-authoritative world. A browser can connect, create or load a world session, and start, pause, or resume a clock that PostgreSQL remembers. Creating a world also generates a 128×128 map from its seed. The browser draws that map and does not own simulation time. No creatures or AI are included.
+Phase 1 is a server-authoritative world. A browser can connect, create or load a world session, and start, pause, or resume a clock that PostgreSQL remembers. Creating a world also generates a map from its seed. The default grid is 128×128. `WORLD_WIDTH` and `WORLD_HEIGHT` choose another size from 8 to 500 for worlds created after a restart. The browser draws that map and does not own simulation time. No creatures or AI are included.
 
 The dashboard around the map is a reference layout for later phases. Population, tasks, events, and the other cards are hardcoded. The live data is the connection, the world session, the generated map, and the clock.
 
@@ -48,7 +48,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` currently runs 23 tests across 10 files.
+`npm test` currently runs 25 tests across 10 files.
 
 ## Limits
 

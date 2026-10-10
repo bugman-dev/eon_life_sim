@@ -34,7 +34,7 @@ describe("world generation", () => {
     expect(new Set(small.tiles.map((tile) => `${tile.x},${tile.y}`)).size).toBe(64);
 
     expect(() => generateWorld({ seed: 3n, width: 0, height: 8 })).toThrow(/Width/);
-    expect(() => generateWorld({ seed: 3n, width: 500, height: 8 })).toThrow(/Width/);
+    expect(() => generateWorld({ seed: 3n, width: 501, height: 8 })).toThrow(/Width/);
   });
 
   it("does not read the clock or an unseeded random source", () => {

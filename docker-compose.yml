@@ -28,6 +28,8 @@ services:
       TICK_RATE: ${TICK_RATE}
       TICK_GAME_SECONDS: ${TICK_GAME_SECONDS}
       PERSIST_EVERY_TICKS: ${PERSIST_EVERY_TICKS}
+      WORLD_WIDTH: ${WORLD_WIDTH}
+      WORLD_HEIGHT: ${WORLD_HEIGHT}
       LOG_LEVEL: ${LOG_LEVEL}
     depends_on:
       db:

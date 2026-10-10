@@ -1,3 +1,4 @@
+import { DEFAULT_WORLD_SIZE, MAX_WORLD_SIZE, MIN_WORLD_SIZE } from "@life-simulator/shared";
 import { config as loadDotenv } from "dotenv";
 import { resolve } from "node:path";
 import { z } from "zod";
@@ -7,6 +8,11 @@ const positiveInt = (fallback: number) =>
     (value) => (value === undefined || value === "" ? fallback : value),
     z.coerce.number().int().positive(),
   );
+
+const worldSize = z.preprocess(
+  (value) => (value === undefined || value === "" ? DEFAULT_WORLD_SIZE : value),
+  z.coerce.number().int().min(MIN_WORLD_SIZE).max(MAX_WORLD_SIZE),
+);
 
 const envSchema = z.object({
   NODE_ENV: z.preprocess(
@@ -23,6 +29,8 @@ const envSchema = z.object({
   TICK_RATE: positiveInt(1),
   TICK_GAME_SECONDS: positiveInt(3600),
   PERSIST_EVERY_TICKS: positiveInt(5),
+  WORLD_WIDTH: worldSize,
+  WORLD_HEIGHT: worldSize,
   DATABASE_CONNECT_ATTEMPTS: positiveInt(10),
   LOG_LEVEL: z.preprocess(
     (value) => (value === undefined || value === "" ? "info" : value),
@@ -39,6 +47,8 @@ export type AppConfig = {
   tickRate: number;
   tickGameSeconds: number;
   persistEveryTicks: number;
+  worldWidth: number;
+  worldHeight: number;
   databaseConnectAttempts: number;
   logLevel: string;
 };
@@ -68,6 +78,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     tickRate: parsed.data.TICK_RATE,
     tickGameSeconds: parsed.data.TICK_GAME_SECONDS,
     persistEveryTicks: parsed.data.PERSIST_EVERY_TICKS,
+    worldWidth: parsed.data.WORLD_WIDTH,
+    worldHeight: parsed.data.WORLD_HEIGHT,
     databaseConnectAttempts: parsed.data.DATABASE_CONNECT_ATTEMPTS,
     logLevel: parsed.data.LOG_LEVEL,
   };

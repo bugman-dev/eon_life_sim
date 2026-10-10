@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const WORLD_GENERATION_VERSION = 1;
 export const MIN_WORLD_SIZE = 8;
-export const MAX_WORLD_SIZE = 128;
+export const MAX_WORLD_SIZE = 500;
 export const DEFAULT_WORLD_SIZE = 128;
 export const WORLD_TILE_SIZE = 1;
 

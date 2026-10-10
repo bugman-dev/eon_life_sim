@@ -39,7 +39,7 @@ describe("world map schema", () => {
     const invalid = tiles.map((entry, index) => (index === 0 ? tile(0, 0, { terrainType: "void" as WorldTile["terrainType"] }) : entry));
     expect(worldMapSchema.safeParse(mapOf(invalid)).success).toBe(false);
     expect(worldMapSchema.safeParse(mapOf(tiles.slice(0, 63))).success).toBe(false);
-    expect(worldMapSchema.safeParse(mapOf(tiles, 200, 8)).success).toBe(false);
+    expect(worldMapSchema.safeParse(mapOf(tiles, 501, 8)).success).toBe(false);
     expect(worldMapSchema.safeParse(mapOf([tile(-1, 0), ...tiles.slice(1)])).success).toBe(false);
   });
 });

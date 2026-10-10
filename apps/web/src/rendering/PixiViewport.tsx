@@ -26,6 +26,7 @@ type ViewState = {
 };
 
 export function PixiViewport({ map, status }: { map: WorldMap | null; status: string | null }) {
+  console.log("PixiViewport", map, status);
   const hostRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<Container | null>(null);
   const viewRef = useRef<ViewState>({ pixelWidth: 0, pixelHeight: 0, fit: 1 });

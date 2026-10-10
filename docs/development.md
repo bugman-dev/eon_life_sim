@@ -18,6 +18,7 @@ Current migrations:
 - `001_world_sessions.sql` creates the session table.
 - `002_world_clock.sql` adds `game_day`, `game_hour`, `game_minute`, and `game_second`, then backfills existing rows as one hour per tick.
 - `003_world_map.sql` adds generation metadata, tiles, and static resource deposits.
+- `004_world_size_limit.sql` raises the stored map side from 128 to 500.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 
@@ -42,7 +43,14 @@ The browser adds a display calendar on top of the stored day. A year is 365 days
 
 ## World generation
 
-New worlds are 128×128 tiles, generation version `1`. The server derives the map from `world_sessions.seed`. A missing seed is filled in once at creation. The same seed and version always produce the same tiles. A saved map is loaded as stored.
+| Variable | Default | Meaning |
+|---|---|---|
+| `WORLD_WIDTH` | `128` | Tiles across a newly created world |
+| `WORLD_HEIGHT` | `128` | Tiles down a newly created world |
+
+Both values must be whole numbers from 8 through 500. The server refuses to start when either one is outside that range. Restart the server after changing them. Worlds already saved keep the size they were generated with. Run `npm run db:migrate` before creating a world larger than 128.
+
+New worlds use generation version `1`. The server derives the map from `world_sessions.seed`. A missing seed is filled in once at creation. The same seed, version, width, and height always produce the same tiles. A saved map is loaded as stored.
 
 A world created before this migration has no map. Opening it shows “This world has no generated map.” Create a new world to generate one. Run `npm run db:migrate` before starting a server that expects the map tables.
 
@@ -90,7 +98,7 @@ The last world id is stored in the browser under `life-simulator:last-world-id`.
 
 ## What was verified
 
-- `npm test` on 10 October 2026 — 10 files, 23 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, deterministic world generation, map persistence and rollback, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock without receiving the map on a tick.
+- `npm test` on 10 October 2026 — 10 files, 25 tests passed. Coverage includes clock rules, the hour mapping, protocol validation, deterministic world generation, map persistence and rollback, configured map size, configuration, health and readiness, database restart behavior, and two WebSocket clients sharing one clock without receiving the map on a tick.
 - `npm run typecheck`
 - `npm run db:migrate` applies `001_world_sessions.sql`, `002_world_clock.sql`, and `003_world_map.sql` on a database that does not already have them.
 - A live server at `http://127.0.0.1:3000` created a world, advanced the tick for two clients, paused, and returned that same paused tick after a new connection.

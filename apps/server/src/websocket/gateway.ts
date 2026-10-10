@@ -45,6 +45,8 @@ export type GatewayDependencies = {
   runtime: SimulationRuntime;
   tickRate: number;
   gameSecondsPerTick: number;
+  worldWidth: number;
+  worldHeight: number;
   logger: AppLogger;
 };
 
@@ -59,6 +61,8 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
     deps.runtime,
     deps.tickRate,
     deps.gameSecondsPerTick,
+    deps.worldWidth,
+    deps.worldHeight,
   );
 
   app.get("/ws", { websocket: true }, (socket) => {

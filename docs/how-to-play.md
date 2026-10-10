@@ -24,7 +24,7 @@ The top bar should say **Connected**, **Protocol 1**, and **Phase 0**. If it sta
 
 1. Click the world button at the top left. Its label is a dash until a world exists.
 2. Choose **Create World**.
-3. Enter a name. A seed is optional. Click **Create world**. The map area fills with land, water, forest, and deposits. The world button shows the seed and `128×128`.
+3. Enter a name. A seed is optional. Click **Create world**. The map area fills with land, water, forest, and deposits. The world button shows the seed and the map size, `128×128` unless `WORLD_WIDTH` and `WORLD_HEIGHT` were changed before the world was created.
 4. Drag the map to pan. Use the mouse wheel to zoom. The stat cards stay on top of the map.
 5. Open **Create World** again to see the world name, id, and seed. Copy the id if you want to load this world in another browser.
 6. Click the round play button on the Simulation Timeline, or the play button in the top bar. Time starts at day 1, 00:00, and moves forward about one in-game hour each second. The map does not change while time passes.
