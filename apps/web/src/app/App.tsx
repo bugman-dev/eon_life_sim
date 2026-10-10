@@ -10,6 +10,7 @@ import {
   type ConnectionStatus,
 } from "../networking/socket";
 import { PixiViewport } from "../rendering/PixiViewport";
+import ErrorModal from "../modals/errorModal";
 import Layout from "./Layout";
 
 export function App() {
@@ -147,7 +148,7 @@ export function App() {
           <p>Phase 0</p>
           <h1>Life Simulator</h1>
         </header>
-        {error ? <p className="error">{error}</p> : null}
+        {error ? <ErrorModal type="Error" message={error} onClose={() => setError(null)} /> : null}
         <PixiViewport />
       </Layout>
     </main>

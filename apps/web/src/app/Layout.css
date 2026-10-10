@@ -189,6 +189,83 @@
   line-height: 1.4;
 }
 
+.eon-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(380px, 100%);
+  padding: 28px 24px 22px;
+  text-align: center;
+}
+
+.eon-notice-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  color: #fff;
+}
+
+.eon-notice-icon svg {
+  display: block;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.eon-notice-icon circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.eon-notice.is-error .eon-notice-icon {
+  background: #d64545;
+}
+
+.eon-notice.is-info .eon-notice-icon {
+  background: var(--blue);
+}
+
+.eon-notice.is-warning .eon-notice-icon {
+  background: #e0a106;
+}
+
+.eon-notice h2 {
+  margin: 14px 0 0;
+  font-size: 18px;
+}
+
+.eon-notice p {
+  margin: 8px 0 0;
+  color: #526277;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.eon .eon-notice > button {
+  margin-top: 18px;
+  min-width: 96px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: #fff;
+  cursor: pointer;
+}
+
+.eon .eon-notice.is-error > button {
+  background: #d64545;
+}
+
+.eon .eon-notice.is-warning > button {
+  background: #c48f04;
+}
+
 .eon-world span,
 .eon-clock span,
 .eon-year-chip span {

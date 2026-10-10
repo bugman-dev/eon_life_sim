@@ -65,7 +65,7 @@ export default function CreateWorld({
           ) : (
             <p>No session</p>
           )}
-          {worldId.trim() !== "" ? (
+          {session === null ? (
             <form onSubmit={createWorld}>
               <label>
                 Name
@@ -87,13 +87,13 @@ export default function CreateWorld({
               </label>
               <button
                 type="submit"
-                disabled={!connected || worldId.trim() === ""}
+                disabled={!connected || name.trim() === ""}
               >
                 Create world
               </button>
             </form>
           ) : null}
-          {worldId.trim() !== "" ? (
+          {session === null ? (
             <form onSubmit={loadWorld}>
               <label>
                 World id
