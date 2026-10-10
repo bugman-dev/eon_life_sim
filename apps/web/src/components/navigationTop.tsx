@@ -39,6 +39,7 @@ export default function NavigationTop({
 
   const elapsedDays = Math.max(session?.gameDay ?? 1, 1) - 1;
   const years = Math.floor(elapsedDays / DAYS_PER_YEAR) + 1;
+  const dayOfYear = (elapsedDays % DAYS_PER_YEAR) + 1;
   return (
     <div className="eon-top">
       <div className="eon-brand">
@@ -123,7 +124,7 @@ export default function NavigationTop({
         <SunIcon />
         <span>
           <strong>
-            Year {years}, Day {elapsedDays}
+            Year {years}, Day {dayOfYear}
           </strong>
           <small>Spring Â· 10:24</small>
         </span>
