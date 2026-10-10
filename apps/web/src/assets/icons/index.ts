@@ -17,6 +17,7 @@ export { default as PlayIcon } from "./PlayIcon";
 export { default as PowersIcon } from "./PowersIcon";
 export { default as ResearchIcon } from "./ResearchIcon";
 export { default as ResourcesIcon } from "./ResourcesIcon";
+export { default as RoundDotIcon } from "./RoundDotIcon";
 export { default as SearchIcon } from "./SearchIcon";
 export { default as SettingsIcon } from "./SettingsIcon";
 export { default as SmileIcon } from "./SmileIcon";

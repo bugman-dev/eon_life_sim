@@ -137,6 +137,11 @@
   stroke-linejoin: round;
 }
 
+.eon-world svg.eon-round-dot {
+  fill: none;
+  stroke: none;
+}
+
 .eon-search {
   flex: 1;
   color: var(--muted);
@@ -478,6 +483,10 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
+}
+
+.eon button.eon-round-pause {
+  cursor: pointer;
 }
 
 .eon-round-pause svg {

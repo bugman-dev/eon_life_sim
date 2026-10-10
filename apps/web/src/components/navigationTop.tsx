@@ -3,13 +3,23 @@ import {
   CaretIcon,
   PauseIcon,
   PlayIcon,
+  RoundDotIcon,
   SearchIcon,
   SettingsIcon,
   StepIcon,
   SunIcon,
 } from "../assets/icons";
+import type { WorldSessionState } from "@life-simulator/shared";
+import { ConnectionStatus } from "../networking/socket";
 
-export default function NavigationTop() {
+export default function NavigationTop({
+  session,
+  connection,
+}: {
+  session: WorldSessionState | null;
+  connection?: ConnectionStatus;
+}) {
+  const { name, seed } = session ?? { name: "", seed: null };
   return (
     <div className="eon-top">
       <div className="eon-brand">
@@ -20,23 +30,36 @@ export default function NavigationTop() {
       <button type="button" className="eon-world">
         <span className="eon-world-thumb" aria-hidden="true" />
         <span>
-          <strong>Green Valley</strong>
-          <small>Seed: 482913</small>
+          <strong>{name || "-"}</strong>
+          <small>Seed: {seed ?? "-"}</small>
         </span>
-        <CaretIcon />
+        {connection === "connected" ? <CaretIcon /> : <RoundDotIcon />}
       </button>
 
       <label className="eon-search">
         <SearchIcon />
-        <input readOnly value="" placeholder="Search people, places, resources..." />
+        <input
+          readOnly
+          value=""
+          placeholder="Search people, places, resources..."
+        />
         <kbd>/</kbd>
       </label>
 
       <div className="eon-transport">
-        <button type="button" className="eon-transport-pause" aria-label="Pause">
+        <button
+          type="button"
+          className="eon-transport-pause"
+          aria-label="Pause"
+          disabled={connection !== "connected"}
+        >
           <PauseIcon />
         </button>
-        <button type="button" aria-label="Play">
+        <button
+          type="button"
+          aria-label="Play"
+          disabled={connection !== "connected"}
+        >
           <PlayIcon />
         </button>
         <button type="button" aria-label="Step">
@@ -54,7 +77,11 @@ export default function NavigationTop() {
       </div>
 
       <div className="eon-top-actions">
-        <button type="button" className="eon-icon-button" aria-label="Notifications">
+        <button
+          type="button"
+          className="eon-icon-button"
+          aria-label="Notifications"
+        >
           <BellIcon />
           <i />
         </button>

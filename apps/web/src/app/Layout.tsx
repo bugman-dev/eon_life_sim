@@ -17,6 +17,7 @@ import RecentEvents from "../components/recentEvents";
 import SelectedItemData from "../components/selectedItemData";
 import WorldStatus from "../components/worldStatus";
 import "./Layout.css";
+import { ConnectionStatus } from "../networking/socket";
 
 const stats = [
   {
@@ -72,15 +73,17 @@ const stats = [
 export default function Layout({
   children,
   session,
+  connection,
   onToggleSimulation,
 }: {
   children: ReactNode;
   session?: WorldSessionState | null;
+  connection?: ConnectionStatus;
   onToggleSimulation?: () => void;
 }) {
   return (
     <div className="eon">
-      <NavigationTop />
+      <NavigationTop session={session ?? null} connection={connection} />
       <div className="eon-body">
         <NavigationSide />
         <div className="eon-center">
@@ -133,6 +136,7 @@ export default function Layout({
 
           <div className="eon-lower">
             <EonTimeline
+              connection={connection ?? "disconnected"}
               tick={session?.simulationTick ?? "0"}
               seconds={session?.gameSecond ?? 0}
               minutes={session?.gameMinute ?? 0}

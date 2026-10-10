@@ -127,8 +127,15 @@ export function App() {
     <main>
       <Layout
         session={session}
+        connection={connection}
         onToggleSimulation={() =>
-          command(session?.status === "running" ? "pause" : session?.simulationTick === "0" ? "start" : "resume")
+          command(
+            session?.status === "running"
+              ? "pause"
+              : session?.simulationTick === "0"
+                ? "start"
+                : "resume",
+          )
         }
       >
         <header>

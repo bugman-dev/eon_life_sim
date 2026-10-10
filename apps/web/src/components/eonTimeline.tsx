@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { CalendarIcon, PauseIcon, PlayIcon } from "../assets/icons";
 import { padTwoDigits } from "../utils/helperFunctions";
+import { ConnectionStatus } from "../networking/socket";
 
 const DAYS_PER_MONTH = 30;
 const MONTHS_PER_YEAR = 12;
 const DAYS_PER_YEAR = 365;
 
 export default function EonTimeline({
+  connection,
   tick = "0",
   seconds = 0,
   minutes = 0,
@@ -15,6 +17,7 @@ export default function EonTimeline({
   running = false,
   onToggle,
 }: {
+  connection?: ConnectionStatus;
   tick?: string;
   seconds?: number;
   minutes?: number;
@@ -51,6 +54,7 @@ export default function EonTimeline({
           className="eon-round-pause"
           aria-label={running ? "Pause simulation" : "Play simulation"}
           onClick={onToggle}
+          disabled={connection !== "connected"}
         >
           {running ? <PauseIcon /> : <PlayIcon />}
         </button>
