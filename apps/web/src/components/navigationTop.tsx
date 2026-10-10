@@ -12,14 +12,25 @@ import {
 import type { WorldSessionState } from "@life-simulator/shared";
 import { ConnectionStatus } from "../networking/socket";
 
+const DAYS_PER_YEAR = 365;
+
 export default function NavigationTop({
   session,
   connection,
+  onPlay,
+  onPause,
 }: {
   session: WorldSessionState | null;
   connection?: ConnectionStatus;
+  onPlay?: () => void;
+  onPause?: () => void;
 }) {
   const { name, seed } = session ?? { name: "", seed: null };
+  const running = session?.status === "running";
+  const disconnected = connection !== "connected";
+
+  const elapsedDays = Math.max(session?.gameDay ?? 1, 1) - 1;
+  const years = Math.floor(elapsedDays / DAYS_PER_YEAR) + 1;
   return (
     <div className="eon-top">
       <div className="eon-brand">
@@ -49,16 +60,23 @@ export default function NavigationTop({
       <div className="eon-transport">
         <button
           type="button"
-          className="eon-transport-pause"
+          className={
+            running ? "eon-transport-pause" : "eon-transport-pause is-active"
+          }
           aria-label="Pause"
-          disabled={connection !== "connected"}
+          disabled={disconnected}
+          onClick={onPause}
         >
           <PauseIcon />
         </button>
         <button
           type="button"
+          className={
+            running ? "eon-transport-play is-active" : "eon-transport-play"
+          }
           aria-label="Play"
-          disabled={connection !== "connected"}
+          disabled={disconnected}
+          onClick={onPlay}
         >
           <PlayIcon />
         </button>
@@ -71,7 +89,9 @@ export default function NavigationTop({
       <div className="eon-clock">
         <SunIcon />
         <span>
-          <strong>Year 1, Day 28</strong>
+          <strong>
+            Year {years}, Day {elapsedDays}
+          </strong>
           <small>Spring Â· 10:24</small>
         </span>
       </div>

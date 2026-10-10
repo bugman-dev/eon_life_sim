@@ -75,15 +75,24 @@ export default function Layout({
   session,
   connection,
   onToggleSimulation,
+  onPlay,
+  onPause,
 }: {
   children: ReactNode;
   session?: WorldSessionState | null;
   connection?: ConnectionStatus;
   onToggleSimulation?: () => void;
+  onPlay?: () => void;
+  onPause?: () => void;
 }) {
   return (
     <div className="eon">
-      <NavigationTop session={session ?? null} connection={connection} />
+      <NavigationTop
+        session={session ?? null}
+        connection={connection}
+        onPlay={onPlay}
+        onPause={onPause}
+      />
       <div className="eon-body">
         <NavigationSide />
         <div className="eon-center">

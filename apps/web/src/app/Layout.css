@@ -182,10 +182,22 @@
   color: #607089;
 }
 
-.eon button.eon-transport-pause,
 .eon button.eon-round-pause,
 .eon .eon-tools button.is-active,
 .eon button.eon-primary {
+  background: var(--blue);
+  color: #fff;
+}
+
+.eon .eon-transport button.eon-transport-pause,
+.eon .eon-transport button.eon-transport-play {
+  cursor: pointer;
+}
+
+.eon .eon-transport button.eon-transport-pause:hover,
+.eon .eon-transport button.eon-transport-play:hover,
+.eon .eon-transport button.eon-transport-pause.is-active,
+.eon .eon-transport button.eon-transport-play.is-active {
   background: var(--blue);
   color: #fff;
 }

@@ -137,6 +137,8 @@ export function App() {
                 : "resume",
           )
         }
+        onPlay={() => command(session?.simulationTick === "0" ? "start" : "resume")}
+        onPause={() => command("pause")}
       >
         <header>
           <p>Phase 0</p>
