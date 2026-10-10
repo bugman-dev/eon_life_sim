@@ -17,6 +17,23 @@ The server reads `.env` from the repository root. `DATABASE_URL` must use `local
 
 PostgreSQL data is the named volume `life_sim_pg`. A normal `docker compose restart db` keeps it. `docker compose down -v` deletes it.
 
+## UI live reload
+
+`docker compose up` serves a built copy of the site. A UI edit appears only after `docker compose up --build`. For live reload, keep the database and the server in Docker and run the site with Vite:
+
+```text
+docker compose stop web
+npm run dev:web
+```
+
+Open http://localhost:5173/. Saving a file in `apps/web` updates the browser. The Docker server on port 3000 stays up, so the clock and play/pause commands keep working.
+
+Stop the `web` container first. It already uses port 5173. When the container site is needed again, stop Vite with Ctrl+C, then:
+
+```text
+docker compose up --build -d web
+```
+
 ## What was verified
 
 - `npm test` — 15 tests passed, including clock rules, protocol validation, database restart behavior, and two WebSocket clients sharing one clock.

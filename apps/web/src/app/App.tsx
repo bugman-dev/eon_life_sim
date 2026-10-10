@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorldSessionState } from "@life-simulator/shared";
 import { ConnectionPanel } from "../features/connection/ConnectionPanel";
-import { ClockPanel } from "../features/simulation-clock/ClockPanel";
 import { WorldSessionPanel } from "../features/world-session/WorldSessionPanel";
 import {
   LAST_WORLD_STORAGE_KEY,
@@ -126,7 +125,12 @@ export function App() {
 
   return (
     <main>
-      <Layout>
+      <Layout
+        session={session}
+        onToggleSimulation={() =>
+          command(session?.status === "running" ? "pause" : session?.simulationTick === "0" ? "start" : "resume")
+        }
+      >
         <header>
           <p>Phase 0</p>
           <h1>Life Simulator</h1>
@@ -141,13 +145,6 @@ export function App() {
           connected={connection === "connected"}
           onCreate={createWorld}
           onLoad={loadWorld}
-        />
-        <ClockPanel
-          session={session}
-          connected={connection === "connected"}
-          onStart={() => command("start")}
-          onPause={() => command("pause")}
-          onResume={() => command("resume")}
         />
         <PixiViewport />
       </Layout>

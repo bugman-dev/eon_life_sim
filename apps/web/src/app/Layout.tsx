@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { WorldSessionState } from "@life-simulator/shared";
 import {
   AnimalsIcon,
   FoodIcon,
@@ -68,7 +69,15 @@ const stats = [
   },
 ];
 
-export default function Layout({ children }: { children: ReactNode }) {
+export default function Layout({
+  children,
+  session,
+  onToggleSimulation,
+}: {
+  children: ReactNode;
+  session?: WorldSessionState | null;
+  onToggleSimulation?: () => void;
+}) {
   return (
     <div className="eon">
       <NavigationTop />
@@ -123,7 +132,15 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
 
           <div className="eon-lower">
-            <EonTimeline />
+            <EonTimeline
+              tick={session?.simulationTick ?? "0"}
+              seconds={session?.gameSecond ?? 0}
+              minutes={session?.gameMinute ?? 0}
+              hours={session?.gameHour ?? 0}
+              days={session?.gameDay ?? 1}
+              running={session?.status === "running"}
+              onToggle={onToggleSimulation}
+            />
             <ActiveTasks />
             <WorldStatus />
           </div>
