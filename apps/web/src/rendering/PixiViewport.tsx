@@ -1,23 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorldMap, WorldTile } from "@life-simulator/shared";
+import type { WorldMap } from "@life-simulator/shared";
 import type { Container } from "pixi.js";
 
-const TILE_PX = 8;
-
-const terrainColors: Record<WorldTile["terrainType"], number> = {
-  deep_water: 0x1d4e89,
-  shallow_water: 0x3d8ec9,
-  sand: 0xe6d3a1,
-  grassland: 0x7dbe5a,
-  rocky: 0x8d8f86,
-  mountain: 0x6b635b,
-};
-
-const depositColors: Record<WorldTile["deposits"][number], number> = {
-  stone: 0xd9dde3,
-  ore: 0x6a4c93,
-  clay: 0xc47b4a,
-};
+const GRID_SIZE = 250;
+const TILE_WIDTH = 64;
+const TILE_HEIGHT = 32;
 
 type ViewState = {
   pixelWidth: number;
@@ -25,8 +12,19 @@ type ViewState = {
   fit: number;
 };
 
-export function PixiViewport({ map, status }: { map: WorldMap | null; status: string | null }) {
-  console.log("PixiViewport", map, status);
+type Point = {
+  x: number;
+  y: number;
+};
+
+function isoPoint(gridX: number, gridY: number): Point {
+  return {
+    x: (gridX - gridY) * (TILE_WIDTH / 2) + GRID_SIZE * (TILE_WIDTH / 2),
+    y: (gridX + gridY) * (TILE_HEIGHT / 2),
+  };
+}
+
+export function PixiViewport({ map: _map, status }: { map: WorldMap | null; status: string | null }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<Container | null>(null);
   const viewRef = useRef<ViewState>({ pixelWidth: 0, pixelHeight: 0, fit: 1 });
@@ -90,7 +88,7 @@ export function PixiViewport({ map, status }: { map: WorldMap | null; status: st
             return;
           }
           event.preventDefault();
-          const next = clamp(current.scale.x * (event.deltaY > 0 ? 0.9 : 1.1), view.fit * 0.5, view.fit * 6);
+          const next = clamp(current.scale.x * (event.deltaY > 0 ? 0.9 : 1.1), view.fit * 0.5, view.fit * 16);
           const rect = host.getBoundingClientRect();
           const localX = (event.clientX - rect.left - current.x) / current.scale.x;
           const localY = (event.clientY - rect.top - current.y) / current.scale.y;
@@ -140,10 +138,6 @@ export function PixiViewport({ map, status }: { map: WorldMap | null; status: st
     for (const child of world.removeChildren()) {
       child.destroy();
     }
-    viewRef.current = { pixelWidth: 0, pixelHeight: 0, fit: 1 };
-    if (!map) {
-      return;
-    }
 
     let cancelled = false;
     void (async () => {
@@ -152,69 +146,40 @@ export function PixiViewport({ map, status }: { map: WorldMap | null; status: st
         return;
       }
 
-      for (const terrain of Object.keys(terrainColors) as WorldTile["terrainType"][]) {
-        const graphic = new pixi.Graphics();
-        let used = false;
-        for (const tile of map.tiles) {
-          if (tile.terrainType !== terrain) {
-            continue;
-          }
-          graphic.rect(tile.x * TILE_PX, tile.y * TILE_PX, TILE_PX, TILE_PX);
-          used = true;
-        }
-        if (used) {
-          graphic.fill(terrainColors[terrain]);
-          world.addChild(graphic);
-        }
-      }
+      const top = isoPoint(0, 0);
+      const right = isoPoint(GRID_SIZE, 0);
+      const bottom = isoPoint(GRID_SIZE, GRID_SIZE);
+      const left = isoPoint(0, GRID_SIZE);
+      const ground = new pixi.Graphics();
+      ground.poly([top.x, top.y, right.x, right.y, bottom.x, bottom.y, left.x, left.y]);
+      ground.fill(0xb7d99a);
+      world.addChild(ground);
 
-      const forest = new pixi.Graphics();
-      const grass = new pixi.Graphics();
-      let hasForest = false;
-      let hasGrass = false;
-      for (const tile of map.tiles) {
-        if (tile.vegetationType === "forest") {
-          forest.rect(tile.x * TILE_PX + 2, tile.y * TILE_PX + 2, 4, 4);
-          hasForest = true;
-        } else if (tile.vegetationType === "grass") {
-          grass.circle(tile.x * TILE_PX + 4, tile.y * TILE_PX + 4, 1.2);
-          hasGrass = true;
-        }
+      const grid = new pixi.Graphics();
+      for (let x = 0; x <= GRID_SIZE; x += 1) {
+        const start = isoPoint(x, 0);
+        const end = isoPoint(x, GRID_SIZE);
+        grid.moveTo(start.x, start.y);
+        grid.lineTo(end.x, end.y);
       }
-      if (hasForest) {
-        forest.fill(0x1f7a3a);
-        world.addChild(forest);
+      for (let y = 0; y <= GRID_SIZE; y += 1) {
+        const start = isoPoint(0, y);
+        const end = isoPoint(GRID_SIZE, y);
+        grid.moveTo(start.x, start.y);
+        grid.lineTo(end.x, end.y);
       }
-      if (hasGrass) {
-        grass.fill(0x3f8f45);
-        world.addChild(grass);
-      }
-      for (const deposit of ["stone", "ore", "clay"] as const) {
-        const graphic = new pixi.Graphics();
-        let used = false;
-        for (const tile of map.tiles) {
-          const index = tile.deposits.indexOf(deposit);
-          if (index < 0) {
-            continue;
-          }
-          graphic.rect(tile.x * TILE_PX + index * 3, tile.y * TILE_PX, 3, 3);
-          used = true;
-        }
-        if (used) {
-          graphic.fill(depositColors[deposit]);
-          world.addChild(graphic);
-        }
-      }
+      grid.stroke({ width: 1, color: 0x5f7d52, pixelLine: true });
+      world.addChild(grid);
 
-      viewRef.current.pixelWidth = map.width * TILE_PX;
-      viewRef.current.pixelHeight = map.height * TILE_PX;
+      viewRef.current.pixelWidth = GRID_SIZE * TILE_WIDTH;
+      viewRef.current.pixelHeight = GRID_SIZE * TILE_HEIGHT;
       fitMap(host, world, viewRef.current);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [map, ready]);
+  }, [ready]);
 
   return (
     <section className="eon-viewport" aria-label="World view">
