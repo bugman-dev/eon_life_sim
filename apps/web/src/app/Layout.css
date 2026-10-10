@@ -78,7 +78,7 @@
 }
 
 .eon-world,
-.eon-search,
+.eon-connection,
 .eon-transport,
 .eon-clock,
 .eon-year-chip {
@@ -235,26 +235,16 @@
   stroke: none;
 }
 
-.eon-search {
+.eon-connection {
   flex: 1;
+  justify-content: flex-start;
+  gap: 18px;
   color: var(--muted);
 }
 
-.eon-search input {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  outline: none;
-}
-
-.eon-search kbd {
-  padding: 2px 7px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  color: #8b9aaf;
-  font-size: 12px;
+.eon-connection strong {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 .eon-transport svg,

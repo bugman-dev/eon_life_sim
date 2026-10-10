@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import type { WorldSessionState } from "@life-simulator/shared";
-import { ConnectionPanel } from "../features/connection/ConnectionPanel";
 import {
   LAST_WORLD_STORAGE_KEY,
   SessionClient,
@@ -127,6 +126,7 @@ export function App() {
       <Layout
         session={session}
         connection={connection}
+        protocolVersion={protocolVersion}
         onToggleSimulation={() =>
           command(
             session?.status === "running"
@@ -148,11 +148,6 @@ export function App() {
           <h1>Life Simulator</h1>
         </header>
         {error ? <p className="error">{error}</p> : null}
-        <ConnectionPanel
-          status={connection}
-          protocolVersion={protocolVersion}
-        />
-
         <PixiViewport />
       </Layout>
     </main>

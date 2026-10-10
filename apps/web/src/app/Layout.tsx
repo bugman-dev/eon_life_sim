@@ -74,6 +74,7 @@ export default function Layout({
   children,
   session,
   connection,
+  protocolVersion,
   onToggleSimulation,
   onPlay,
   onPause,
@@ -83,6 +84,7 @@ export default function Layout({
   children: ReactNode;
   session?: WorldSessionState | null;
   connection?: ConnectionStatus;
+  protocolVersion?: number | null;
   onToggleSimulation?: () => void;
   onPlay?: () => void;
   onPause?: () => void;
@@ -94,6 +96,7 @@ export default function Layout({
       <NavigationTop
         session={session ?? null}
         connection={connection}
+        protocolVersion={protocolVersion}
         onPlay={onPlay}
         onPause={onPause}
         onCreate={onCreate}

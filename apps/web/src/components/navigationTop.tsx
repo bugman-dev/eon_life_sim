@@ -4,7 +4,6 @@ import {
   PauseIcon,
   PlayIcon,
   RoundDotIcon,
-  SearchIcon,
   SettingsIcon,
   StepIcon,
   SunIcon,
@@ -16,9 +15,16 @@ import CreateWorld from "../modals/createWorld";
 
 const DAYS_PER_YEAR = 365;
 
+const connectionLabels: Record<ConnectionStatus, string> = {
+  connecting: "Connecting",
+  connected: "Connected",
+  disconnected: "Disconnected",
+};
+
 export default function NavigationTop({
   session,
   connection,
+  protocolVersion = null,
   onPlay,
   onPause,
   onCreate,
@@ -26,6 +32,7 @@ export default function NavigationTop({
 }: {
   session: WorldSessionState | null;
   connection?: ConnectionStatus;
+  protocolVersion?: number | null;
   onPlay?: () => void;
   onPause?: () => void;
   onCreate: (name: string, seed?: number) => void;
@@ -81,15 +88,17 @@ export default function NavigationTop({
         ) : null}
       </div>
 
-      <label className="eon-search">
-        <SearchIcon />
-        <input
-          readOnly
-          value=""
-          placeholder="Search people, places, resources..."
-        />
-        <kbd>/</kbd>
-      </label>
+      <div className="eon-connection" aria-label="Connection">
+        <span>
+          Status <strong>{connectionLabels[connection ?? "disconnected"]}</strong>
+        </span>
+        <span>
+          Protocol <strong>{protocolVersion ?? "—"}</strong>
+        </span>
+        <span>
+          Phase <strong>0</strong>
+        </span>
+      </div>
 
       <div className="eon-transport">
         <button
