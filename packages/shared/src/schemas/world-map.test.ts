@@ -42,12 +42,12 @@ describe("world map schema", () => {
     expect(worldMapSchema.safeParse(mapOf([tile(-1, 0), ...tiles.slice(1)])).success).toBe(false);
 
     const withDeposit = tiles.map((entry, index) =>
-      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 250, growthStage: 3 }] }) : entry,
+      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 50000, growthStage: 3 }] }) : entry,
     );
     expect(worldMapSchema.safeParse(mapOf(withDeposit)).success).toBe(true);
-    const lowAmount = tiles.map((entry, index) =>
-      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 99, growthStage: 3 }] }) : entry,
+    const fraction = tiles.map((entry, index) =>
+      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 10.5, growthStage: 3 }] }) : entry,
     );
-    expect(worldMapSchema.safeParse(mapOf(lowAmount)).success).toBe(false);
+    expect(worldMapSchema.safeParse(mapOf(fraction)).success).toBe(false);
   });
 });

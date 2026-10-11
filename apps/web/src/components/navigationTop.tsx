@@ -113,7 +113,7 @@ export default function NavigationTop({
           Protocol <strong>{protocolVersion ?? "—"}</strong>
         </span>
         <span>
-          Phase <strong>0</strong>
+          Phase <strong>1</strong>
         </span>
       </div>
 

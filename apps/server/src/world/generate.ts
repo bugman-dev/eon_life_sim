@@ -1,5 +1,5 @@
 import { DEFAULT_WORLD_SIZE, WORLD_GENERATION_VERSION, WORLD_TILE_SIZE, type WorldTile } from "@life-simulator/shared";
-import { assignDeposits, DEFAULT_DEPOSIT_PERCENTS, type DepositPercents } from "./deposits.js";
+import { assignDeposits, DEFAULT_DEPOSIT_SETTINGS, type DepositSettings } from "./deposits.js";
 import { assignElevation } from "./elevation.js";
 import type { Sample } from "./grid.js";
 import { buildIsland } from "./island.js";
@@ -15,8 +15,8 @@ export type GenerateWorldInput = {
   seed: bigint;
   width?: number;
   height?: number;
-  /** Percent of land tiles for stone, ore, and clay. Omitted calls use the shipped defaults. */
-  deposits?: DepositPercents;
+  /** How many stone, ore, and clay piles to place, and the amount range for each. Omitted calls use the shipped defaults. */
+  deposits?: DepositSettings;
 };
 
 /**
@@ -24,7 +24,7 @@ export type GenerateWorldInput = {
  * The same seed and size always produce the same tiles.
  * Stored elevation stays 0. The vegetation list stays empty.
  * Stone, ore, and clay are static deposits. How many piles appear is a percent of the land.
- * Each pile stores a harvestable amount and a mature growth stage.
+ * Each pile stores a harvestable amount inside that deposit's configured range, and a mature growth stage.
  */
 export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   const width = input.width ?? DEFAULT_WORLD_SIZE;
@@ -39,7 +39,7 @@ export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   fillEnclosedLand(grid);
   assignCoastSand(grid, input.seed);
   assignDryLand(grid, input.seed);
-  assignDeposits(grid, input.seed, input.deposits ?? DEFAULT_DEPOSIT_PERCENTS);
+  assignDeposits(grid, input.seed, input.deposits ?? DEFAULT_DEPOSIT_SETTINGS);
 
   const world: GeneratedWorld = {
     seed: input.seed,

@@ -8,8 +8,6 @@ export {
   WORLD_TILE_SIZE,
   DEPOSIT_GROWTH_STAGE,
   depositTypeSchema,
-  MAX_DEPOSIT_AMOUNT,
-  MIN_DEPOSIT_AMOUNT,
   resourceDepositSchema,
   soilTypeSchema,
   terrainTypeSchema,

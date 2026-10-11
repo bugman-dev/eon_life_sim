@@ -57,19 +57,36 @@ describe("world generation", () => {
   });
 
   it("places each deposit up to its share of the land", () => {
-    const deposits = { stone: 2, ore: 0.5, clay: 0.2 };
+    const deposits = {
+      stone: { percent: 2, minAmount: 200, maxAmount: 250 },
+      ore: { percent: 0.5, minAmount: 300, maxAmount: 300 },
+      clay: { percent: 0.2, minAmount: 150, maxAmount: 180 },
+    };
     const world = generateWorld({ seed: 7n, deposits });
     const land = world.tiles.filter((tile) => tile.terrainType !== "water").length;
     const target = (percent: number) => Math.round((land * percent) / 100);
     const count = (type: "stone" | "ore" | "clay") => world.tiles.filter((tile) => tile.deposits[0]?.type === type).length;
 
-    expect(count("stone")).toBe(target(deposits.stone));
-    expect(count("ore")).toBe(target(deposits.ore));
+    expect(count("stone")).toBe(target(deposits.stone.percent));
+    expect(count("ore")).toBe(target(deposits.ore.percent));
     expect(count("clay")).toBeGreaterThan(0);
-    expect(count("clay")).toBeLessThanOrEqual(target(deposits.clay));
+    expect(count("clay")).toBeLessThanOrEqual(target(deposits.clay.percent));
     expectDepositPlacement(world);
+    for (const tile of world.tiles) {
+      for (const deposit of tile.deposits) {
+        expect(deposit.amount).toBeGreaterThanOrEqual(deposits[deposit.type].minAmount);
+        expect(deposit.amount).toBeLessThanOrEqual(deposits[deposit.type].maxAmount);
+      }
+    }
 
-    const none = generateWorld({ seed: 7n, deposits: { stone: 0, ore: 0, clay: 0 } });
+    const none = generateWorld({
+      seed: 7n,
+      deposits: {
+        stone: { percent: 0, minAmount: 100, maxAmount: 500 },
+        ore: { percent: 0, minAmount: 100, maxAmount: 500 },
+        clay: { percent: 0, minAmount: 100, maxAmount: 500 },
+      },
+    });
     expect(none.tiles.every((tile) => tile.deposits.length === 0)).toBe(true);
   });
 
@@ -101,7 +118,7 @@ function expectDepositPlacement(world: GeneratedWorld) {
   const placed = world.tiles.flatMap((tile) => tile.deposits);
 
   expect(placed.every((deposit) => deposit.growthStage === 3)).toBe(true);
-  expect(placed.every((deposit) => Number.isInteger(deposit.amount) && deposit.amount >= 100 && deposit.amount <= 500)).toBe(true);
+  expect(placed.every((deposit) => Number.isInteger(deposit.amount))).toBe(true);
   expect(new Set(placed.map((deposit) => deposit.amount)).size).toBeGreaterThan(1);
 
   expect(world.tiles.every((tile) => tile.deposits.length <= 1)).toBe(true);

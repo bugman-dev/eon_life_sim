@@ -1,7 +1,7 @@
 import Fastify, { type FastifyBaseLogger } from "fastify";
 import { loadConfig, type AppConfig } from "./config/env.js";
 import { loadWorldConfig } from "./config/world-config.js";
-import type { DepositPercents } from "./world/deposits.js";
+import type { DepositSettings } from "./world/deposits.js";
 import { registerHealthRoutes } from "./http/health.js";
 import { createLogger } from "./observability/logger.js";
 import { createPool } from "./persistence/database.js";
@@ -16,7 +16,7 @@ export type CreateAppOptions = {
   scheduler?: TickScheduler;
 };
 
-export type ServerConfig = AppConfig & { deposits: DepositPercents };
+export type ServerConfig = AppConfig & { deposits: DepositSettings };
 
 export async function createApp(options: CreateAppOptions = {}) {
   const config: ServerConfig = { ...loadConfig(options.env ?? process.env), deposits: loadWorldConfig() };

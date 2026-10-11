@@ -14,10 +14,6 @@ export const soilTypeSchema = z.enum(["poor", "normal", "fertile"]);
 
 export const depositTypeSchema = z.enum(["stone", "ore", "clay"]);
 
-/** Harvestable units stored on a deposit. Harvesting comes later. */
-export const MIN_DEPOSIT_AMOUNT = 100;
-export const MAX_DEPOSIT_AMOUNT = 500;
-
 /**
  * Growth stages are 1 new, 2 growing, and 3 mature.
  * Deposits are stored mature. Vegetation will use the earlier stages later.
@@ -27,7 +23,8 @@ export const DEPOSIT_GROWTH_STAGE = 3 as const;
 export const resourceDepositSchema = z
   .object({
     type: depositTypeSchema,
-    amount: z.number().int().min(MIN_DEPOSIT_AMOUNT).max(MAX_DEPOSIT_AMOUNT),
+    /** Harvestable units. The range comes from worldConfig.json. */
+    amount: z.number().int(),
     growthStage: z.literal(DEPOSIT_GROWTH_STAGE),
   })
   .strict();

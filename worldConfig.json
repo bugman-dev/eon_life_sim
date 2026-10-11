@@ -1,7 +1,19 @@
 {
   "deposits": {
-    "stone": 0.5,
-    "ore": 0.1,
-    "clay": 0.2
+    "stone":{
+      "percent": 0.5,
+      "minAmount": 1000,
+      "maxAmount": 50000
+    },
+    "ore": {
+      "percent": 0.1,
+      "minAmount": 1000,
+      "maxAmount": 50000
+    },
+    "clay": {
+      "percent": 0.2,
+      "minAmount": 1,
+      "maxAmount": 10
+    }
   }
 }

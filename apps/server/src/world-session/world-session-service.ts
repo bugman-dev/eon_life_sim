@@ -2,7 +2,7 @@ import type { WorldMapRepository } from "../persistence/world-map-repository.js"
 import type { WorldSessionRecord, WorldSessionRepository } from "../persistence/world-session-repository.js";
 import { clockFromTick } from "../simulation/clock.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
-import type { DepositPercents } from "../world/deposits.js";
+import type { DepositSettings } from "../world/deposits.js";
 import { generateWorld, GenerationError } from "../world/generate.js";
 
 export class ServiceError extends Error {
@@ -24,7 +24,7 @@ export class WorldSessionService {
     private readonly gameSecondsPerTick: number,
     private readonly worldWidth: number,
     private readonly worldHeight: number,
-    private readonly deposits: DepositPercents,
+    private readonly deposits: DepositSettings,
   ) {}
 
   async create(input: { name: string; seed?: number }): Promise<WorldSessionRecord> {

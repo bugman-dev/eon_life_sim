@@ -1,27 +1,36 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
-import type { DepositPercents } from "../world/deposits.js";
+import type { DepositSettings } from "../world/deposits.js";
 
-const percent = z.number().min(0).max(100);
+const depositBandSchema = z
+  .object({
+    percent: z.number().min(0).max(100),
+    minAmount: z.number().int(),
+    maxAmount: z.number().int(),
+  })
+  .strict()
+  .refine((band) => band.minAmount <= band.maxAmount, {
+    message: "minAmount must be less than or equal to maxAmount",
+  });
 
 const worldConfigSchema = z
   .object({
     deposits: z
       .object({
-        stone: percent,
-        ore: percent,
-        clay: percent,
+        stone: depositBandSchema,
+        ore: depositBandSchema,
+        clay: depositBandSchema,
       })
       .strict(),
   })
   .strict();
 
 /**
- * Reads deposit percents from worldConfig.json.
+ * Reads deposit percents and amount ranges from worldConfig.json.
  * Looks in the process directory, then two levels up, the same places as `.env`.
  */
-export function loadWorldConfig(cwd = process.cwd()): DepositPercents {
+export function loadWorldConfig(cwd = process.cwd()): DepositSettings {
   const candidates = [resolve(cwd, "worldConfig.json"), resolve(cwd, "../../worldConfig.json")];
   let raw: string | undefined;
   let found = candidates[0] ?? "worldConfig.json";

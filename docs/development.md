@@ -21,6 +21,7 @@ Current migrations:
 - `004_world_size_limit.sql` raises the stored map side from 128 to 500.
 - `005_flat_terrain.sql` keeps terrain as grass, dirt, sand, and water, and clears elevation, vegetation, and deposits.
 - `006_deposit_yield.sql` stores a harvestable amount and a mature growth stage on each deposit, and drops the unused vegetation columns. Existing deposits are backfilled as amount 100 and growth stage 3.
+- `007_deposit_amount_config.sql` drops the fixed 100-to-500 amount check. `worldConfig.json` decides the range.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 
@@ -58,19 +59,19 @@ A world created before this migration has no map. Opening it shows “This world
 
 ## Deposit amounts
 
-`worldConfig.json` in the repository root sets how many deposits a new world gets. Each number is a percent of the land tiles, from 0 through 100. Decimals are allowed. Water is not part of the percent, and water tiles stay empty.
+`worldConfig.json` in the repository root sets how many deposits a new world gets, and the harvestable amount of each pile. `percent` is a percent of the land tiles, from 0 through 100. Decimals are allowed. Water is not part of the percent, and water tiles stay empty. `minAmount` and `maxAmount` are whole numbers, and the minimum cannot be higher than the maximum. Those two numbers are the only amount range.
 
 ```json
 {
   "deposits": {
-    "stone": 2,
-    "ore": 0.5,
-    "clay": 0.2
+    "stone": { "percent": 0.5, "minAmount": 1000, "maxAmount": 50000 },
+    "ore": { "percent": 0.1, "minAmount": 1000, "maxAmount": 50000 },
+    "clay": { "percent": 0.2, "minAmount": 1, "maxAmount": 10 }
   }
 }
 ```
 
-`2` means about 2 of every 100 land tiles are stone. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Each pile also stores a harvestable amount from 100 to 500 and growth stage 3. The same seed gives the same amounts. Restart the server after editing the file. Worlds already saved keep the deposits they were created with. Run `npm run db:migrate` before creating a world that stores those amounts.
+`0.5` means about 1 of every 200 land tiles is stone. Each stone pile stores an amount from its minimum through its maximum. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Growth stage stays 3. The same seed and the same file give the same piles and amounts. Restart the server after editing the file. Worlds already saved keep the deposits they were created with. Run `npm run db:migrate` so stored amounts are no longer limited to 100 through 500.
 
 ## UI live reload
 

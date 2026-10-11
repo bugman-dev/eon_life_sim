@@ -1,0 +1,2 @@
+ALTER TABLE world_resource_deposits
+  DROP CONSTRAINT world_resource_deposits_amount_check;
