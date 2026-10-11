@@ -15,5 +15,21 @@
       "minAmount": 1,
       "maxAmount": 10
     }
+  },
+  "vegitation": {
+    "tree": {
+      "percent": 0.1,
+      "minAmount": 10,
+      "maxAmount": 100
+    },
+    "shrubs": {
+      "percent": 0.1
+    },
+    "flowers": {
+      "percent": 0.1
+    },
+    "grass": {
+      "percent": 0.1
+    }
   }
 }

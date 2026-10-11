@@ -31,11 +31,16 @@ describe("world map persistence", () => {
       context.config.worldWidth,
       context.config.worldHeight,
       context.config.deposits,
+      context.config.vegitation,
     );
 
     const created = await service.create({ name: "Mapped", seed: 11 });
     const loaded = await context.maps.findMap(created.id);
-    const expected = generateWorld({ seed: 11n, deposits: context.config.deposits });
+    const expected = generateWorld({
+      seed: 11n,
+      deposits: context.config.deposits,
+      vegitation: context.config.vegitation,
+    });
     expect(loaded).toEqual({
       worldId: created.id,
       seed: "11",
@@ -99,6 +104,7 @@ describe("world map persistence", () => {
       context.config.worldWidth,
       context.config.worldHeight,
       context.config.deposits,
+      context.config.vegitation,
     );
 
     const created = await service.create({ name: "Small", seed: 9 });
@@ -121,6 +127,7 @@ describe("world map persistence", () => {
       context.config.worldWidth,
       context.config.worldHeight,
       context.config.deposits,
+      context.config.vegitation,
     );
 
     const created = await service.create({ name: "Doomed", seed: 3 });

@@ -37,9 +37,11 @@ export function assertDimensions(width: number, height: number): void {
 
 /**
  * Checks the map the pipeline is allowed to emit.
- * Both land and water are required. Elevation stays 0 and the vegetation list stays empty.
- * A tile holds at most one deposit. Clay is only on dirt, and water holds none.
+ * Both land and water are required. Elevation stays 0.
+ * A tile holds at most one deposit and one plant. Clay is only on dirt, and water holds none.
  * A deposit amount is a whole number from the config, and its growth stage is mature.
+ * Shrubs, flowers, and grass tufts sit only on grass, with amount 0 and a mature stage.
+ * Trees sit on grass, sand, or dirt.
  */
 export function assertWorld(world: GeneratedWorld): void {
   if (world.generationVersion !== WORLD_GENERATION_VERSION) {
@@ -58,8 +60,11 @@ export function assertWorld(world: GeneratedWorld): void {
       throw new GenerationError("Tile coordinates must be unique and inside the map.");
     }
     seen.add(key);
-    if (tile.elevation !== 0 || tile.fertility !== 0 || tile.vegetation.length !== 0) {
-      throw new GenerationError("Elevation, fertility, and vegetation are not generated yet.");
+    if (tile.elevation !== 0 || tile.fertility !== 0) {
+      throw new GenerationError("Elevation and fertility are not generated yet.");
+    }
+    if (!validPlant(tile)) {
+      throw new GenerationError("A tile can hold one plant, and that plant must match its ground.");
     }
     if (tile.deposits.length > 1 || new Set(tile.deposits.map((deposit) => deposit.type)).size !== tile.deposits.length) {
       throw new GenerationError("A tile can hold one deposit.");
@@ -89,7 +94,22 @@ export function assertWorld(world: GeneratedWorld): void {
 }
 
 function validDeposit(deposit: WorldTile["deposits"][number]) {
-  return (
-    Number.isInteger(deposit.amount) && deposit.growthStage === DEPOSIT_GROWTH_STAGE
-  );
+  return Number.isInteger(deposit.amount) && deposit.growthStage === DEPOSIT_GROWTH_STAGE;
+}
+
+function validPlant(tile: WorldTile) {
+  if (tile.vegitation.length > 1) {
+    return false;
+  }
+  const plant = tile.vegitation[0];
+  if (!plant) {
+    return true;
+  }
+  if (tile.terrainType === "water" || !Number.isInteger(plant.amount)) {
+    return false;
+  }
+  if (plant.type === "tree") {
+    return plant.growthStage === 1 || plant.growthStage === 2 || plant.growthStage === 3;
+  }
+  return plant.amount === 0 && plant.growthStage === DEPOSIT_GROWTH_STAGE && tile.terrainType === "grass";
 }

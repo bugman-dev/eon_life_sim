@@ -22,6 +22,7 @@ Current migrations:
 - `005_flat_terrain.sql` keeps terrain as grass, dirt, sand, and water, and clears elevation, vegetation, and deposits.
 - `006_deposit_yield.sql` stores a harvestable amount and a mature growth stage on each deposit, and drops the unused vegetation columns. Existing deposits are backfilled as amount 100 and growth stage 3.
 - `007_deposit_amount_config.sql` drops the fixed 100-to-500 amount check. `worldConfig.json` decides the range.
+- `008_vegetation.sql` stores one tree, shrub, flower clump, or grass tuft on a tile, with an amount and a growth stage.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 
@@ -72,6 +73,8 @@ A world created before this migration has no map. Opening it shows “This world
 ```
 
 `0.5` means about 1 of every 200 land tiles is stone. Each stone pile stores an amount from its minimum through its maximum. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Growth stage stays 3. The same seed and the same file give the same piles and amounts. Restart the server after editing the file. Worlds already saved keep the deposits they were created with. Run `npm run db:migrate` so stored amounts are no longer limited to 100 through 500.
+
+`vegitation` in the same file sets trees, shrubs, flowers, and grass tufts. `percent` is again a percent of the land tiles. Only `tree` has `minAmount` and `maxAmount`. Shrubs, flowers, and grass tufts store amount 0. A tile holds one plant. Trees prefer grass, appear rarely on sand, and least often on dirt. Most trees are growth stage 3. The other plants grow only on grass and stay at stage 3. Run `npm run db:migrate` before creating a world that stores plants.
 
 ## UI live reload
 

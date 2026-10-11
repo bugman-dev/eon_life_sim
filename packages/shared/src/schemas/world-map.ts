@@ -16,9 +16,13 @@ export const depositTypeSchema = z.enum(["stone", "ore", "clay"]);
 
 /**
  * Growth stages are 1 new, 2 growing, and 3 mature.
- * Deposits are stored mature. Vegetation will use the earlier stages later.
+ * Deposits are stored mature. Trees use all three stages. Other plants are stored mature.
  */
 export const DEPOSIT_GROWTH_STAGE = 3 as const;
+
+export const growthStageSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+
+export const vegetationTypeSchema = z.enum(["tree", "shrubs", "flowers", "grass"]);
 
 export const resourceDepositSchema = z
   .object({
@@ -26,6 +30,15 @@ export const resourceDepositSchema = z
     /** Harvestable units. The range comes from worldConfig.json. */
     amount: z.number().int(),
     growthStage: z.literal(DEPOSIT_GROWTH_STAGE),
+  })
+  .strict();
+
+export const vegetationItemSchema = z
+  .object({
+    type: vegetationTypeSchema,
+    /** Harvestable units. Only trees use the configured range. Other plants store 0. */
+    amount: z.number().int(),
+    growthStage: growthStageSchema,
   })
   .strict();
 
@@ -38,8 +51,8 @@ export const worldTileSchema = z
     waterType: waterTypeSchema,
     soilType: soilTypeSchema,
     fertility: z.number().int().min(0).max(100),
-    /** Empty until plants are generated. Each plant will carry its own growth stage. */
-    vegetation: z.array(z.never()),
+    /** One plant at most. The name matches worldConfig.json. */
+    vegitation: z.array(vegetationItemSchema).max(1),
     deposits: z.array(resourceDepositSchema).max(1),
   })
   .strict();
@@ -92,5 +105,7 @@ export type WaterType = z.infer<typeof waterTypeSchema>;
 export type SoilType = z.infer<typeof soilTypeSchema>;
 export type DepositType = z.infer<typeof depositTypeSchema>;
 export type ResourceDeposit = z.infer<typeof resourceDepositSchema>;
+export type VegetationType = z.infer<typeof vegetationTypeSchema>;
+export type VegetationItem = z.infer<typeof vegetationItemSchema>;
 export type WorldTile = z.infer<typeof worldTileSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;

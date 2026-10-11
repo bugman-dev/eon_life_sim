@@ -48,6 +48,7 @@ function blankSample(x: number, y: number, water: boolean): Sample {
     terrain: water ? "water" : "grass",
     waterType: water ? "lake" : "none",
     deposits: [],
+    vegitation: [],
   };
 }
 

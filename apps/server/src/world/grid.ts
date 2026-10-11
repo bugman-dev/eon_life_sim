@@ -1,4 +1,4 @@
-import type { ResourceDeposit, TerrainType, WaterType } from "@life-simulator/shared";
+import type { ResourceDeposit, TerrainType, VegetationItem, WaterType } from "@life-simulator/shared";
 
 /**
  * The mutable grid each generation stage reads and updates.
@@ -16,6 +16,8 @@ export type Sample = {
   waterType: WaterType;
   /** Static deposits on this tile. A tile holds at most one. */
   deposits: ResourceDeposit[];
+  /** One plant on this tile. Empty when the tile is bare. */
+  vegitation: VegetationItem[];
 };
 
 export type MapGrid = {

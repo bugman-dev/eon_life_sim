@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import type { DepositType, TerrainType, WorldMap, WorldTile } from "@life-simulator/shared";
+import type { DepositType, TerrainType, VegetationType, WorldMap, WorldTile } from "@life-simulator/shared";
 import type { Container, Texture } from "pixi.js";
+import flowersUrl from "../assets/images/FlowersAtlas.png";
+import grassPlantsUrl from "../assets/images/GrassAtlas.png";
 import tilesetUrl from "../assets/images/IsometricTerrainAtlas.png";
 import depositUrl from "../assets/images/ResourceDepositAtlas.png";
+import shrubsUrl from "../assets/images/ShrubsAtlas.png";
+import treesUrl from "../assets/images/TreesAtlas.png";
 import type { Selection } from "../state/app-state";
-import { useAppState } from "../state/app-state";
+import { selectedVegetation, useAppState } from "../state/app-state";
 
 const TILE_WIDTH = 64;
 const VARIANT_COUNT = 6;
 const DEPOSIT_VARIANT_COUNT = 3;
+const PLANT_VARIANT_COUNT = 6;
 /** Shared ground size of a diamond in the atlas, in source pixels. */
 const DIAMOND_WIDTH = 217;
 const DIAMOND_HALF = 71;
@@ -118,6 +123,61 @@ const depositFrames: Record<DepositType, Frame[]> = {
 /** Scales the widest pile down to one tile, so a deposit sits on its own diamond. */
 const DEPOSIT_SCALE = TILE_WIDTH / Math.max(...Object.values(depositFrames).flat().map((frame) => frame.width));
 
+/** Tall trees across the top of TreesAtlas.png, then the short trees along the bottom. Stage 3 uses the tall row. */
+const largeTreeFrames: Frame[] = [
+  { x: 34, y: 122, width: 233, height: 433 },
+  { x: 291, y: 122, width: 227, height: 434 },
+  { x: 539, y: 122, width: 199, height: 435 },
+  { x: 762, y: 122, width: 198, height: 437 },
+  { x: 980, y: 122, width: 267, height: 438 },
+  { x: 1264, y: 122, width: 244, height: 437 },
+];
+const smallTreeFrames: Frame[] = [
+  { x: 59, y: 664, width: 191, height: 271 },
+  { x: 307, y: 664, width: 193, height: 271 },
+  { x: 571, y: 664, width: 152, height: 271 },
+  { x: 801, y: 664, width: 182, height: 271 },
+  { x: 1058, y: 664, width: 173, height: 271 },
+  { x: 1302, y: 664, width: 173, height: 270 },
+];
+const treeFrames = { large: largeTreeFrames, small: smallTreeFrames };
+
+/** Six shrubs, left to right, in ShrubsAtlas.png. */
+const shrubFrames: Frame[] = [
+  { x: 30, y: 260, width: 265, height: 319 },
+  { x: 314, y: 260, width: 271, height: 325 },
+  { x: 603, y: 260, width: 274, height: 325 },
+  { x: 894, y: 260, width: 271, height: 324 },
+  { x: 1185, y: 260, width: 269, height: 319 },
+  { x: 1473, y: 260, width: 275, height: 325 },
+];
+
+/** Six flower clumps, left to right, in FlowersAtlas.png. */
+const flowerFrames: Frame[] = [
+  { x: 63, y: 182, width: 259, height: 365 },
+  { x: 417, y: 182, width: 263, height: 367 },
+  { x: 769, y: 181, width: 271, height: 366 },
+  { x: 1125, y: 182, width: 271, height: 366 },
+  { x: 1475, y: 182, width: 278, height: 382 },
+  { x: 1842, y: 181, width: 264, height: 367 },
+];
+
+/** Six grass tufts, left to right, in GrassAtlas.png. */
+const grassPlantFrames: Frame[] = [
+  { x: 72, y: 182, width: 253, height: 355 },
+  { x: 427, y: 182, width: 248, height: 358 },
+  { x: 771, y: 182, width: 264, height: 358 },
+  { x: 1120, y: 182, width: 277, height: 360 },
+  { x: 1479, y: 182, width: 269, height: 360 },
+  { x: 1853, y: 182, width: 260, height: 358 },
+];
+
+/** The widest tall tree is one tile across. Shorter plants use a smaller share of that tile. */
+const TREE_SCALE = TILE_WIDTH / 267;
+const SHRUB_SCALE = (TILE_WIDTH * 0.72) / 275;
+const FLOWER_SCALE = (TILE_WIDTH * 0.58) / 278;
+const GRASS_PLANT_SCALE = (TILE_WIDTH * 0.5) / 277;
+
 /**
  * Fills the map area with one PixiJS application.
  * Ground and deposit sprites are built once when a map arrives. Dragging pans and the wheel zooms.
@@ -180,20 +240,31 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
     let cancelled = false;
     const terrainSheet = createSpriteSheet(terrainFrames);
     const depositSheet = createSpriteSheet(depositFrames);
+    const treeSheet = createSpriteSheet(treeFrames);
+    const shrubSheet = createSpriteSheet({ shrubs: shrubFrames });
+    const flowerSheet = createSpriteSheet({ flowers: flowerFrames });
+    const grassSheet = createSpriteSheet({ grass: grassPlantFrames });
+    const sheets = [terrainSheet, depositSheet, treeSheet, shrubSheet, flowerSheet, grassSheet];
     const camera = cameraRef.current;
-    void paintMap(host, world, map, camera, terrainSheet, depositSheet, () => cancelled || worldRef.current !== world).catch(
-      (caught: unknown) => {
-        if (!cancelled) {
-          setError(errorMessage(caught, "Map textures failed to load."));
-        }
-      },
-    );
+    void paintMap(
+      host,
+      world,
+      map,
+      camera,
+      { terrain: terrainSheet, deposits: depositSheet, trees: treeSheet, shrubs: shrubSheet, flowers: flowerSheet, grass: grassSheet },
+      () => cancelled || worldRef.current !== world,
+    ).catch((caught: unknown) => {
+      if (!cancelled) {
+        setError(errorMessage(caught, "Map textures failed to load."));
+      }
+    });
 
     return () => {
       cancelled = true;
       clearSprites(world);
-      terrainSheet.release();
-      depositSheet.release();
+      for (const sheet of sheets) {
+        sheet.release();
+      }
     };
   }, [map, ready]);
 
@@ -319,31 +390,59 @@ async function paintMap(
   world: Container,
   map: WorldMap,
   camera: Camera,
-  terrainSheet: SpriteSheet<TerrainType>,
-  depositSheet: SpriteSheet<DepositType>,
+  sheets: {
+    terrain: SpriteSheet<TerrainType>;
+    deposits: SpriteSheet<DepositType>;
+    trees: SpriteSheet<"large" | "small">;
+    shrubs: SpriteSheet<"shrubs">;
+    flowers: SpriteSheet<"flowers">;
+    grass: SpriteSheet<"grass">;
+  },
   isStale: () => boolean,
 ) {
   const pixi = await import("pixi.js");
-  const terrainSource = await loadKeyedSheet(tilesetUrl, pixi);
-  const terrainTextures = terrainSheet.cut(pixi, terrainSource);
+  const [terrainSource, depositSource, treeSource, shrubSource, flowerSource, grassSource] = await Promise.all([
+    loadKeyedSheet(tilesetUrl, pixi),
+    loadKeyedSheet(depositUrl, pixi),
+    loadKeyedSheet(treesUrl, pixi),
+    loadKeyedSheet(shrubsUrl, pixi),
+    loadKeyedSheet(flowersUrl, pixi),
+    loadKeyedSheet(grassPlantsUrl, pixi),
+  ]);
   if (isStale()) {
-    terrainSheet.release();
-    depositSheet.release();
+    releaseSheets(sheets);
     return;
   }
-  const depositSource = await loadKeyedSheet(depositUrl, pixi);
-  const depositTextures = depositSheet.cut(pixi, depositSource);
+  const terrainTextures = sheets.terrain.cut(pixi, terrainSource);
+  const depositTextures = sheets.deposits.cut(pixi, depositSource);
+  const treeTextures = sheets.trees.cut(pixi, treeSource);
+  const shrubTextures = sheets.shrubs.cut(pixi, shrubSource);
+  const flowerTextures = sheets.flowers.cut(pixi, flowerSource);
+  const grassTextures = sheets.grass.cut(pixi, grassSource);
   if (isStale()) {
-    terrainSheet.release();
-    depositSheet.release();
+    releaseSheets(sheets);
     return;
   }
 
-  world.addChild(buildTileLayer(pixi, map, terrainTextures, depositTextures));
+  world.addChild(
+    buildTileLayer(pixi, map, terrainTextures, depositTextures, {
+      large: treeTextures.large,
+      small: treeTextures.small,
+      shrubs: shrubTextures.shrubs,
+      flowers: flowerTextures.flowers,
+      grass: grassTextures.grass,
+    }),
+  );
   const size = mapPixelSize(map);
   camera.pixelWidth = size.pixelWidth;
   camera.pixelHeight = size.pixelHeight;
   fitMap(host, world, camera);
+}
+
+function releaseSheets(sheets: { [key: string]: { release: () => void } }) {
+  for (const sheet of Object.values(sheets)) {
+    sheet.release();
+  }
 }
 
 /** Removes sprites without destroying the textures they share. */
@@ -395,15 +494,21 @@ function buildTileLayer(
   map: WorldMap,
   terrainTextures: Record<TerrainType, Texture[]>,
   depositTextures: Record<DepositType, Texture[]>,
+  plantTextures: Record<"large" | "small" | "shrubs" | "flowers" | "grass", Texture[]>,
 ) {
   const layer = new pixi.Container();
-  const lift = depositOverhang();
+  const lift = sceneryOverhang();
   forEachTile(map, (x, y, tile) => {
     const ground = terrainTextures[tile.terrain][frameIndex(tile.terrain, map.seed, x, y)];
     layer.addChild(createTileSprite(pixi, ground, x, y, map.height, lift));
     for (const deposit of tile.deposits) {
       const texture = depositTextures[deposit.type][depositVariant(map.seed, x, y, deposit.type)];
       layer.addChild(createDepositSprite(pixi, texture, x, y, map.height, lift));
+    }
+    for (const plant of tile.vegitation) {
+      const look = plantLook(plant);
+      const texture = plantTextures[look.key][plantVariant(map.seed, x, y, plant.type)];
+      layer.addChild(createPlantSprite(pixi, texture, x, y, map.height, lift, look.scale));
     }
   });
   return layer;
@@ -412,10 +517,13 @@ function buildTileLayer(
 /** Walks stored tiles from back to front. The diagonal sum x + y is the draw order. */
 function forEachTile(
   map: WorldMap,
-  visit: (x: number, y: number, tile: { terrain: TerrainType; deposits: WorldTile["deposits"] }) => void,
+  visit: (x: number, y: number, tile: { terrain: TerrainType; deposits: WorldTile["deposits"]; vegitation: WorldTile["vegitation"] }) => void,
 ) {
   const tiles = new Map(
-    map.tiles.map((tile) => [`${tile.x},${tile.y}`, { terrain: tile.terrainType, deposits: tile.deposits }]),
+    map.tiles.map((tile) => [
+      `${tile.x},${tile.y}`,
+      { terrain: tile.terrainType, deposits: tile.deposits, vegitation: tile.vegitation },
+    ]),
   );
   for (let sum = 0; sum < map.width + map.height - 1; sum += 1) {
     const xStart = Math.max(0, sum - (map.height - 1));
@@ -447,12 +555,34 @@ function createTileSprite(pixi: Pixi, texture: Texture, x: number, y: number, ma
  * The same coordinate keeps the same variant of that deposit.
  */
 function createDepositSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number) {
+  return createFootSprite(pixi, texture, x, y, mapHeight, lift, DEPOSIT_SCALE);
+}
+
+/** Sets a plant's base on the middle of the diamond. Mature trees use the tall picture. */
+function createPlantSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number, scale: number) {
+  return createFootSprite(pixi, texture, x, y, mapHeight, lift, scale);
+}
+
+function createFootSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number, scale: number) {
   const sprite = new pixi.Sprite(texture);
   const point = isoPoint(x, y, mapHeight);
   sprite.anchor.set(0.5, 1);
-  sprite.scale.set(DEPOSIT_SCALE);
+  sprite.scale.set(scale);
   sprite.position.set(point.x, point.y + TILE_HEIGHT / 2 + lift);
   return sprite;
+}
+
+function plantLook(plant: WorldTile["vegitation"][number]): { key: "large" | "small" | "shrubs" | "flowers" | "grass"; scale: number } {
+  if (plant.type === "tree") {
+    return { key: plant.growthStage === 3 ? "large" : "small", scale: TREE_SCALE };
+  }
+  if (plant.type === "shrubs") {
+    return { key: "shrubs", scale: SHRUB_SCALE };
+  }
+  if (plant.type === "flowers") {
+    return { key: "flowers", scale: FLOWER_SCALE };
+  }
+  return { key: "grass", scale: GRASS_PLANT_SCALE };
 }
 
 /**
@@ -474,6 +604,11 @@ function variantIndex(seed: string, x: number, y: number): number {
 /** Same seed, coordinate, and deposit always pick the same pile. */
 function depositVariant(seed: string, x: number, y: number, deposit: DepositType): number {
   return hashVariant(`${seed}:${deposit}:${x}:${y}`, DEPOSIT_VARIANT_COUNT);
+}
+
+/** Same seed, coordinate, and plant always pick the same picture. */
+function plantVariant(seed: string, x: number, y: number, plant: VegetationType): number {
+  return hashVariant(`${seed}:${plant}:${x}:${y}`, PLANT_VARIANT_COUNT);
 }
 
 function hashVariant(text: string, count: number): number {
@@ -528,7 +663,7 @@ function mapPixelSize(map: WorldMap) {
   const span = map.width + map.height;
   return {
     pixelWidth: (span * TILE_WIDTH) / 2,
-    pixelHeight: (span * TILE_HEIGHT) / 2 + skirtHeight() + depositOverhang(),
+    pixelHeight: (span * TILE_HEIGHT) / 2 + skirtHeight() + sceneryOverhang(),
   };
 }
 
@@ -541,6 +676,12 @@ function skirtHeight() {
 function depositOverhang() {
   const tallest = Math.max(...Object.values(depositFrames).flat().map((frame) => frame.height));
   return Math.max(0, tallest * DEPOSIT_SCALE - TILE_HEIGHT / 2);
+}
+
+/** Space above the back tiles so a tall tree that rises past the diamond peak stays inside the camera. */
+function sceneryOverhang() {
+  const tallestTree = Math.max(...largeTreeFrames.map((frame) => frame.height));
+  return Math.max(depositOverhang(), tallestTree * TREE_SCALE - TILE_HEIGHT / 2);
 }
 
 /** Places a tile's top corner. X grows down-right and Y grows down-left. */
@@ -568,13 +709,68 @@ function selectAtPointer(
     x: (clientX - rect.left - world.x) / world.scale.x,
     y: (clientY - rect.top - world.y) / world.scale.y,
   };
-  const lift = depositOverhang();
+  const lift = sceneryOverhang();
+  const plantHit = plantAt(map, local, lift);
+  if (plantHit) {
+    const tile = tileAt(map, plantHit.x, plantHit.y);
+    if (tile) {
+      select({ tile, deposit: null, vegetation: selectedVegetation(plantHit.type) });
+    }
+    return;
+  }
   const depositHit = depositAt(map, local, lift);
   const tile = depositHit ? tileAt(map, depositHit.x, depositHit.y) : tileAtPoint(map, local, lift);
   if (!tile) {
     return;
   }
-  select({ tile, deposit: depositHit?.deposit ?? null });
+  select({ tile, deposit: depositHit?.deposit ?? null, vegetation: null });
+}
+
+/** The front-most plant whose picture contains the point. Trees are tall, so the search reaches a few tiles back. */
+function plantAt(map: WorldMap, local: Point, lift: number): { x: number; y: number; type: VegetationType } | null {
+  const rough = gridAt(local, map.height, lift);
+  const candidates: { x: number; y: number }[] = [];
+  for (let y = rough.y - 4; y <= rough.y + 4; y += 1) {
+    for (let x = rough.x - 4; x <= rough.x + 4; x += 1) {
+      if (tileAt(map, x, y)) {
+        candidates.push({ x, y });
+      }
+    }
+  }
+  candidates.sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
+
+  let hit: { x: number; y: number; type: VegetationType } | null = null;
+  for (const candidate of candidates) {
+    const tile = tileAt(map, candidate.x, candidate.y);
+    if (!tile) {
+      continue;
+    }
+    for (const plant of tile.vegitation) {
+      if (insidePlant(map, local, candidate.x, candidate.y, plant, lift)) {
+        hit = { x: candidate.x, y: candidate.y, type: plant.type };
+      }
+    }
+  }
+  return hit;
+}
+
+function insidePlant(map: WorldMap, local: Point, x: number, y: number, plant: WorldTile["vegitation"][number], lift: number) {
+  const look = plantLook(plant);
+  const frames =
+    look.key === "large"
+      ? largeTreeFrames
+      : look.key === "small"
+        ? smallTreeFrames
+        : look.key === "shrubs"
+          ? shrubFrames
+          : look.key === "flowers"
+            ? flowerFrames
+            : grassPlantFrames;
+  const frame = frames[plantVariant(map.seed, x, y, plant.type)];
+  if (!frame) {
+    return false;
+  }
+  return insideFoot(map, local, x, y, frame, look.scale, lift);
 }
 
 /** The front-most pile whose picture contains the point. */
@@ -610,8 +806,12 @@ function insideDeposit(map: WorldMap, local: Point, x: number, y: number, deposi
   if (!frame) {
     return false;
   }
-  const width = frame.width * DEPOSIT_SCALE;
-  const height = frame.height * DEPOSIT_SCALE;
+  return insideFoot(map, local, x, y, frame, DEPOSIT_SCALE, lift);
+}
+
+function insideFoot(map: WorldMap, local: Point, x: number, y: number, frame: Frame, scale: number, lift: number) {
+  const width = frame.width * scale;
+  const height = frame.height * scale;
   const point = isoPoint(x, y, map.height);
   const footX = point.x;
   const footY = point.y + TILE_HEIGHT / 2 + lift;

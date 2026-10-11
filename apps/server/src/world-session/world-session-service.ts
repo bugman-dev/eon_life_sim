@@ -3,6 +3,7 @@ import type { WorldSessionRecord, WorldSessionRepository } from "../persistence/
 import { clockFromTick } from "../simulation/clock.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
 import type { DepositSettings } from "../world/deposits.js";
+import type { VegetationSettings } from "../world/vegetation.js";
 import { generateWorld, GenerationError } from "../world/generate.js";
 
 export class ServiceError extends Error {
@@ -25,6 +26,7 @@ export class WorldSessionService {
     private readonly worldWidth: number,
     private readonly worldHeight: number,
     private readonly deposits: DepositSettings,
+    private readonly vegitation: VegetationSettings,
   ) {}
 
   async create(input: { name: string; seed?: number }): Promise<WorldSessionRecord> {
@@ -39,6 +41,7 @@ export class WorldSessionService {
         width: this.worldWidth,
         height: this.worldHeight,
         deposits: this.deposits,
+        vegitation: this.vegitation,
       });
     } catch (error) {
       const message = error instanceof GenerationError ? error.message : "World generation failed.";

@@ -12,7 +12,7 @@ function tile(x: number, y: number, patch: Partial<WorldTile> = {}): WorldTile {
     waterType: "none",
     soilType: "normal",
     fertility: 40,
-    vegetation: [],
+    vegitation: [],
     deposits: [],
     ...patch,
   };

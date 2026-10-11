@@ -1,5 +1,6 @@
 import { DEFAULT_WORLD_SIZE, WORLD_GENERATION_VERSION, WORLD_TILE_SIZE, type WorldTile } from "@life-simulator/shared";
 import { assignDeposits, DEFAULT_DEPOSIT_SETTINGS, type DepositSettings } from "./deposits.js";
+import { assignVegetation, DEFAULT_VEGETATION_SETTINGS, type VegetationSettings } from "./vegetation.js";
 import { assignElevation } from "./elevation.js";
 import type { Sample } from "./grid.js";
 import { buildIsland } from "./island.js";
@@ -17,14 +18,17 @@ export type GenerateWorldInput = {
   height?: number;
   /** How many stone, ore, and clay piles to place, and the amount range for each. Omitted calls use the shipped defaults. */
   deposits?: DepositSettings;
+  /** How many trees, shrubs, flowers, and grass tufts to place. Omitted calls use the shipped defaults. */
+  vegitation?: VegetationSettings;
 };
 
 /**
  * Builds a seeded island of grass, dirt, sand, and water.
  * The same seed and size always produce the same tiles.
- * Stored elevation stays 0. The vegetation list stays empty.
+ * Stored elevation stays 0.
  * Stone, ore, and clay are static deposits. How many piles appear is a percent of the land.
  * Each pile stores a harvestable amount inside that deposit's configured range, and a mature growth stage.
+ * Trees, shrubs, flowers, and grass tufts are one plant per tile. Only trees store a harvestable amount.
  */
 export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   const width = input.width ?? DEFAULT_WORLD_SIZE;
@@ -40,6 +44,7 @@ export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   assignCoastSand(grid, input.seed);
   assignDryLand(grid, input.seed);
   assignDeposits(grid, input.seed, input.deposits ?? DEFAULT_DEPOSIT_SETTINGS);
+  assignVegetation(grid, input.seed, input.vegitation ?? DEFAULT_VEGETATION_SETTINGS);
 
   const world: GeneratedWorld = {
     seed: input.seed,
@@ -64,7 +69,7 @@ function toTile(sample: Sample): WorldTile {
     waterType: water ? sample.waterType : "none",
     soilType: water ? "poor" : "normal",
     fertility: 0,
-    vegetation: [],
+    vegitation: [...sample.vegitation],
     deposits: [...sample.deposits],
   };
 }

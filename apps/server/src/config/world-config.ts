@@ -2,6 +2,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
 import type { DepositSettings } from "../world/deposits.js";
+import type { VegetationSettings } from "../world/vegetation.js";
+
+export type WorldRules = {
+  deposits: DepositSettings;
+  vegitation: VegetationSettings;
+};
 
 const depositBandSchema = z
   .object({
@@ -14,6 +20,12 @@ const depositBandSchema = z
     message: "minAmount must be less than or equal to maxAmount",
   });
 
+const plantBandSchema = z
+  .object({
+    percent: z.number().min(0).max(100),
+  })
+  .strict();
+
 const worldConfigSchema = z
   .object({
     deposits: z
@@ -23,14 +35,22 @@ const worldConfigSchema = z
         clay: depositBandSchema,
       })
       .strict(),
+    vegitation: z
+      .object({
+        tree: depositBandSchema,
+        shrubs: plantBandSchema,
+        flowers: plantBandSchema,
+        grass: plantBandSchema,
+      })
+      .strict(),
   })
   .strict();
 
 /**
- * Reads deposit percents and amount ranges from worldConfig.json.
+ * Reads deposit and vegetation settings from worldConfig.json.
  * Looks in the process directory, then two levels up, the same places as `.env`.
  */
-export function loadWorldConfig(cwd = process.cwd()): DepositSettings {
+export function loadWorldConfig(cwd = process.cwd()): WorldRules {
   const candidates = [resolve(cwd, "worldConfig.json"), resolve(cwd, "../../worldConfig.json")];
   let raw: string | undefined;
   let found = candidates[0] ?? "worldConfig.json";
@@ -63,7 +83,7 @@ export function loadWorldConfig(cwd = process.cwd()): DepositSettings {
       .join("; ");
     throw new Error(`Invalid configuration: ${details}`);
   }
-  return parsed.data.deposits;
+  return parsed.data;
 }
 
 function isMissingFile(error: unknown) {

@@ -1,4 +1,4 @@
-import type { DepositType, WorldMap, WorldTile } from "@life-simulator/shared";
+import type { DepositType, VegetationType, WorldMap, WorldTile } from "@life-simulator/shared";
 import type { Pool, PoolClient } from "pg";
 import type { GeneratedWorld } from "../world/generate.js";
 import {
@@ -40,6 +40,14 @@ type DepositRow = {
   growth_stage: WorldTile["deposits"][number]["growthStage"];
 };
 
+type PlantRow = {
+  x: number;
+  y: number;
+  vegetation_type: VegetationType;
+  amount: number;
+  growth_stage: WorldTile["vegitation"][number]["growthStage"];
+};
+
 export class PgWorldMapRepository implements WorldMapRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -55,6 +63,7 @@ export class PgWorldMapRepository implements WorldMapRepository {
       );
       await insertTiles(client, session.id, world.tiles);
       await insertDeposits(client, session.id, world.tiles);
+      await insertVegetation(client, session.id, world.tiles);
       await client.query("COMMIT");
       return inserted;
     } catch (error) {
@@ -103,6 +112,23 @@ export class PgWorldMapRepository implements WorldMapRepository {
       });
       deposits.set(key, current);
     }
+    const plantRows = await this.pool.query<PlantRow>(
+      `SELECT x, y, vegetation_type, amount, growth_stage
+       FROM world_vegetation
+       WHERE world_id = $1
+       ORDER BY y, x`,
+      [worldId],
+    );
+    const plants = new Map<string, WorldTile["vegitation"]>();
+    for (const row of plantRows.rows) {
+      plants.set(`${row.x},${row.y}`, [
+        {
+          type: row.vegetation_type,
+          amount: Number(row.amount),
+          growthStage: Number(row.growth_stage) as PlantRow["growth_stage"],
+        },
+      ]);
+    }
 
     return {
       worldId,
@@ -119,7 +145,7 @@ export class PgWorldMapRepository implements WorldMapRepository {
         waterType: row.water_type,
         soilType: row.soil_type,
         fertility: Number(row.fertility),
-        vegetation: [],
+        vegitation: plants.get(`${row.x},${row.y}`) ?? [],
         deposits: deposits.get(`${row.x},${row.y}`) ?? [],
       })),
     };
@@ -192,6 +218,27 @@ async function insertDeposits(client: PoolClient, worldId: string, tiles: WorldT
       points.map((point) => point.deposit.type),
       points.map((point) => point.deposit.amount),
       points.map((point) => point.deposit.growthStage),
+    ],
+  );
+}
+
+async function insertVegetation(client: PoolClient, worldId: string, tiles: WorldTile[]) {
+  const points = tiles.flatMap((tile) => tile.vegitation.map((plant) => ({ x: tile.x, y: tile.y, plant })));
+  if (points.length === 0) {
+    return;
+  }
+  await client.query(
+    `INSERT INTO world_vegetation (world_id, x, y, vegetation_type, amount, growth_stage)
+     SELECT $1, plant.x, plant.y, plant.vegetation_type, plant.amount, plant.growth_stage
+     FROM unnest($2::int[], $3::int[], $4::text[], $5::int[], $6::int[])
+       AS plant(x, y, vegetation_type, amount, growth_stage)`,
+    [
+      worldId,
+      points.map((point) => point.x),
+      points.map((point) => point.y),
+      points.map((point) => point.plant.type),
+      points.map((point) => point.plant.amount),
+      points.map((point) => point.plant.growthStage),
     ],
   );
 }

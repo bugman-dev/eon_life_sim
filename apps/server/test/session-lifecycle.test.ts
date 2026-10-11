@@ -32,6 +32,7 @@ describe("world session lifecycle", () => {
       first.config.worldWidth,
       first.config.worldHeight,
       first.config.deposits,
+      first.config.vegitation,
     );
 
     const created = await service.create({ name: "Lifecycle", seed: 7 });

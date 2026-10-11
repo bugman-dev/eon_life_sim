@@ -38,11 +38,7 @@ describe("world generation", () => {
     const land = first.tiles.filter((tile) => tile.terrainType !== "water");
     const grass = land.filter((tile) => tile.terrainType === "grass").length;
     expect(grass).toBeGreaterThan(land.length / 2);
-    expect(
-      first.tiles.every(
-        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetation.length === 0,
-      ),
-    ).toBe(true);
+    expect(first.tiles.every((tile) => tile.elevation === 0 && tile.fertility === 0)).toBe(true);
   });
 
   it("places stone and ore mostly on grass, and clay only on dirt near water", () => {
@@ -88,6 +84,46 @@ describe("world generation", () => {
       },
     });
     expect(none.tiles.every((tile) => tile.deposits.length === 0)).toBe(true);
+  });
+
+  it("places trees mostly on grass, and shrubs, flowers, and grass tufts only on grass", () => {
+    const vegitation = {
+      tree: { percent: 4, minAmount: 10, maxAmount: 20 },
+      shrubs: { percent: 1 },
+      flowers: { percent: 1 },
+      grass: { percent: 1 },
+    };
+    const world = generateWorld({ seed: 7n, vegitation });
+    const land = world.tiles.filter((tile) => tile.terrainType !== "water").length;
+    const target = (percent: number) => Math.round((land * percent) / 100);
+    const plants = world.tiles.flatMap((tile) => tile.vegitation.map((plant) => ({ tile, plant })));
+    const ofType = (type: "tree" | "shrubs" | "flowers" | "grass") => plants.filter((entry) => entry.plant.type === type);
+
+    expect(ofType("tree")).toHaveLength(target(vegitation.tree.percent));
+    expect(ofType("shrubs")).toHaveLength(target(vegitation.shrubs.percent));
+    expect(ofType("flowers")).toHaveLength(target(vegitation.flowers.percent));
+    expect(ofType("grass")).toHaveLength(target(vegitation.grass.percent));
+    expect(world.tiles.every((tile) => tile.vegitation.length <= 1)).toBe(true);
+    expect(world.tiles.filter((tile) => tile.terrainType === "water").every((tile) => tile.vegitation.length === 0)).toBe(true);
+
+    const trees = ofType("tree");
+    const on = (terrain: "grass" | "sand" | "dirt") => trees.filter((entry) => entry.tile.terrainType === terrain).length;
+    expect(on("grass")).toBeGreaterThan(on("sand"));
+    expect(on("sand")).toBeGreaterThan(on("dirt"));
+    expect(on("dirt")).toBeGreaterThan(0);
+    const mature = trees.filter((entry) => entry.plant.growthStage === 3).length;
+    expect(mature).toBeGreaterThan(trees.length / 2);
+    expect(
+      trees.every(
+        (entry) => entry.plant.amount >= vegitation.tree.minAmount && entry.plant.amount <= vegitation.tree.maxAmount,
+      ),
+    ).toBe(true);
+
+    for (const type of ["shrubs", "flowers", "grass"] as const) {
+      expect(ofType(type).every((entry) => entry.tile.terrainType === "grass" && entry.plant.amount === 0 && entry.plant.growthStage === 3)).toBe(
+        true,
+      );
+    }
   });
 
   it("builds a small grid and rejects dimensions outside the supported range", () => {

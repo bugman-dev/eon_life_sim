@@ -7,6 +7,7 @@ import type { WorldMapRepository } from "../persistence/world-map-repository.js"
 import type { WorldSessionRepository } from "../persistence/world-session-repository.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
 import type { DepositSettings } from "../world/deposits.js";
+import type { VegetationSettings } from "../world/vegetation.js";
 import { WorldSessionService } from "../world-session/world-session-service.js";
 import { dispatch } from "./dispatcher.js";
 import { parseClientMessage } from "./parse-message.js";
@@ -53,6 +54,7 @@ export type GatewayDependencies = {
   worldWidth: number;
   worldHeight: number;
   deposits: DepositSettings;
+  vegitation: VegetationSettings;
   logger: AppLogger;
 };
 
@@ -70,6 +72,7 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
     deps.worldWidth,
     deps.worldHeight,
     deps.deposits,
+    deps.vegitation,
   );
 
   app.get("/ws", { websocket: true }, (socket) => {
