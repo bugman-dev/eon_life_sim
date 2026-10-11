@@ -10,6 +10,7 @@ import {
   type ConnectionStatus,
 } from "../networking/socket";
 import { PixiViewport } from "../rendering/PixiViewport";
+import { AppStateProvider } from "../state/app-state";
 import ErrorModal from "../modals/errorModal";
 import Layout from "./Layout";
 
@@ -174,42 +175,42 @@ export function App() {
   }
 
   return (
-    <main>
-      <Layout
-        session={session}
-        connection={connection}
-        protocolVersion={protocolVersion}
-        onToggleSimulation={() =>
-          command(
-            session?.status === "running"
-              ? "pause"
-              : session?.simulationTick === "0"
-                ? "start"
-                : "resume",
-          )
-        }
-        onPlay={() =>
-          command(session?.simulationTick === "0" ? "start" : "resume")
-        }
-        onPause={() => command("pause")}
-        onCreate={createWorld}
-        onLoad={loadWorld}
-        onDelete={deleteWorld}
-        mapWidth={map?.width ?? null}
-        mapHeight={map?.height ?? null}
-      >
-        {error ? <ErrorModal type="Error" message={error} onClose={() => setError(null)} /> : null}
-        <PixiViewport
-          map={map}
-          status={
-            session && !map
-              ? mapUnavailable
-                ? "This world has no generated map."
-                : "Loading map"
-              : null
+    <AppStateProvider>
+      <main>
+        <Layout
+          session={session}
+          connection={connection}
+          protocolVersion={protocolVersion}
+          onToggleSimulation={() =>
+            command(
+              session?.status === "running"
+                ? "pause"
+                : session?.simulationTick === "0"
+                  ? "start"
+                  : "resume",
+            )
           }
-        />
-      </Layout>
-    </main>
+          onPlay={() => command(session?.simulationTick === "0" ? "start" : "resume")}
+          onPause={() => command("pause")}
+          onCreate={createWorld}
+          onLoad={loadWorld}
+          onDelete={deleteWorld}
+          mapWidth={map?.width ?? null}
+          mapHeight={map?.height ?? null}
+        >
+          {error ? <ErrorModal type="Error" message={error} onClose={() => setError(null)} /> : null}
+          <PixiViewport
+            map={map}
+            status={
+              session && !map
+                ? mapUnavailable
+                  ? "This world has no generated map."
+                  : "Loading map"
+                : null
+            }
+          />
+        </Layout>
+      </main>
+    </AppStateProvider>
   );
 }

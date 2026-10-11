@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { DepositType, TerrainType, WorldMap } from "@life-simulator/shared";
+import type { DepositType, TerrainType, WorldMap, WorldTile } from "@life-simulator/shared";
 import type { Container, Texture } from "pixi.js";
 import tilesetUrl from "../assets/images/IsometricTerrainAtlas.png";
 import depositUrl from "../assets/images/ResourceDepositAtlas.png";
+import type { Selection } from "../state/app-state";
+import { useAppState } from "../state/app-state";
 
 const TILE_WIDTH = 64;
 const VARIANT_COUNT = 6;
@@ -19,6 +21,8 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 16;
 const WHEEL_OUT = 0.9;
 const WHEEL_IN = 1.1;
+/** Pointer travel below this, in screen pixels, is a click. Past it, the gesture pans. */
+const CLICK_SLOP = 4;
 
 /** Sheet background keyed out so neighboring diamonds do not show a dark box. */
 const SHEET_BACKGROUND = { red: 24, green: 27, blue: 31 };
@@ -122,6 +126,11 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<Container | null>(null);
   const cameraRef = useRef<Camera>(emptyCamera());
+  const mapRef = useRef<WorldMap | null>(map);
+  mapRef.current = map;
+  const { select, clearSelection } = useAppState();
+  const selectRef = useRef(select);
+  selectRef.current = select;
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -134,7 +143,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
     let cancelled = false;
     let stop: (() => void) | undefined;
 
-    void startApplication(host, worldRef, cameraRef, () => cancelled, (release) => {
+    void startApplication(host, worldRef, cameraRef, mapRef, selectRef, () => cancelled, (release) => {
       stop = release;
       setReady(true);
     }).catch((caught: unknown) => {
@@ -150,6 +159,10 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
       setReady(false);
     };
   }, []);
+
+  useEffect(() => {
+    clearSelection();
+  }, [map, clearSelection]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -200,6 +213,8 @@ async function startApplication(
   host: HTMLElement,
   worldRef: RefBox<Container | null>,
   cameraRef: RefBox<Camera>,
+  mapRef: RefBox<WorldMap | null>,
+  selectRef: RefBox<(selection: Selection) => void>,
   isCancelled: () => boolean,
   onReady: (release: () => void) => void,
 ) {
@@ -218,7 +233,7 @@ async function startApplication(
   application.stage.addChild(world);
   host.appendChild(application.canvas);
   worldRef.current = world;
-  const unbindCamera = bindCamera(host, worldRef, cameraRef);
+  const unbindCamera = bindCamera(host, worldRef, cameraRef, mapRef, selectRef);
 
   onReady(() => {
     unbindCamera();
@@ -227,9 +242,15 @@ async function startApplication(
   });
 }
 
-/** Dragging pans the map. The wheel zooms toward the pointer. */
-function bindCamera(host: HTMLElement, worldRef: RefBox<Container | null>, cameraRef: RefBox<Camera>) {
-  const drag = { active: false, x: 0, y: 0 };
+/** Dragging pans the map. A click logs the tile, and the deposit when the pointer lands on a pile. */
+function bindCamera(
+  host: HTMLElement,
+  worldRef: RefBox<Container | null>,
+  cameraRef: RefBox<Camera>,
+  mapRef: RefBox<WorldMap | null>,
+  selectRef: RefBox<(selection: Selection) => void>,
+) {
+  const drag = { active: false, x: 0, y: 0, startX: 0, startY: 0 };
 
   const onDown = (event: PointerEvent) => {
     if (cameraRef.current.pixelWidth === 0) {
@@ -238,6 +259,8 @@ function bindCamera(host: HTMLElement, worldRef: RefBox<Container | null>, camer
     drag.active = true;
     drag.x = event.clientX;
     drag.y = event.clientY;
+    drag.startX = event.clientX;
+    drag.startY = event.clientY;
   };
   const onMove = (event: PointerEvent) => {
     const world = worldRef.current;
@@ -250,7 +273,17 @@ function bindCamera(host: HTMLElement, worldRef: RefBox<Container | null>, camer
     drag.y = event.clientY;
     panBy(host, world, cameraRef.current, dx, dy);
   };
-  const onUp = () => {
+  const onUp = (event: PointerEvent) => {
+    if (!drag.active) {
+      return;
+    }
+    drag.active = false;
+    const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
+    if (moved <= CLICK_SLOP) {
+      selectAtPointer(host, worldRef.current, mapRef.current, event.clientX, event.clientY, selectRef.current);
+    }
+  };
+  const onCancel = () => {
     drag.active = false;
   };
   const onWheel = (event: WheelEvent) => {
@@ -265,14 +298,14 @@ function bindCamera(host: HTMLElement, worldRef: RefBox<Container | null>, camer
   host.addEventListener("pointerdown", onDown);
   host.addEventListener("pointermove", onMove);
   host.addEventListener("pointerup", onUp);
-  host.addEventListener("pointercancel", onUp);
+  host.addEventListener("pointercancel", onCancel);
   host.addEventListener("wheel", onWheel, { passive: false });
 
   return () => {
     host.removeEventListener("pointerdown", onDown);
     host.removeEventListener("pointermove", onMove);
     host.removeEventListener("pointerup", onUp);
-    host.removeEventListener("pointercancel", onUp);
+    host.removeEventListener("pointercancel", onCancel);
     host.removeEventListener("wheel", onWheel);
   };
 }
@@ -516,6 +549,105 @@ function isoPoint(gridX: number, gridY: number, mapHeight: number): Point {
     x: (gridX - gridY) * (TILE_WIDTH / 2) + mapHeight * (TILE_WIDTH / 2),
     y: (gridX + gridY) * (TILE_HEIGHT / 2),
   };
+}
+
+/** Stores the tile under the pointer. A pile hit is stored as the selected deposit. */
+function selectAtPointer(
+  host: HTMLElement,
+  world: Container | null,
+  map: WorldMap | null,
+  clientX: number,
+  clientY: number,
+  select: (selection: Selection) => void,
+) {
+  if (!world || !map) {
+    return;
+  }
+  const rect = host.getBoundingClientRect();
+  const local = {
+    x: (clientX - rect.left - world.x) / world.scale.x,
+    y: (clientY - rect.top - world.y) / world.scale.y,
+  };
+  const lift = depositOverhang();
+  const depositHit = depositAt(map, local, lift);
+  const tile = depositHit ? tileAt(map, depositHit.x, depositHit.y) : tileAtPoint(map, local, lift);
+  if (!tile) {
+    return;
+  }
+  select({ tile, deposit: depositHit?.deposit ?? null });
+}
+
+/** The front-most pile whose picture contains the point. */
+function depositAt(map: WorldMap, local: Point, lift: number): { x: number; y: number; deposit: DepositType } | null {
+  const rough = gridAt(local, map.height, lift);
+  const candidates: { x: number; y: number }[] = [];
+  for (let y = rough.y - 2; y <= rough.y + 2; y += 1) {
+    for (let x = rough.x - 2; x <= rough.x + 2; x += 1) {
+      if (tileAt(map, x, y)) {
+        candidates.push({ x, y });
+      }
+    }
+  }
+  candidates.sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
+
+  let hit: { x: number; y: number; deposit: DepositType } | null = null;
+  for (const candidate of candidates) {
+    const tile = tileAt(map, candidate.x, candidate.y);
+    if (!tile) {
+      continue;
+    }
+    for (const deposit of tile.deposits) {
+      if (insideDeposit(map, local, candidate.x, candidate.y, deposit, lift)) {
+        hit = { x: candidate.x, y: candidate.y, deposit };
+      }
+    }
+  }
+  return hit;
+}
+
+function insideDeposit(map: WorldMap, local: Point, x: number, y: number, deposit: DepositType, lift: number) {
+  const frame = depositFrames[deposit][depositVariant(map.seed, x, y, deposit)];
+  if (!frame) {
+    return false;
+  }
+  const width = frame.width * DEPOSIT_SCALE;
+  const height = frame.height * DEPOSIT_SCALE;
+  const point = isoPoint(x, y, map.height);
+  const footX = point.x;
+  const footY = point.y + TILE_HEIGHT / 2 + lift;
+  return local.x >= footX - width / 2 && local.x <= footX + width / 2 && local.y >= footY - height && local.y <= footY;
+}
+
+/** The diamond that contains the point, when the point is inside that diamond. */
+function tileAtPoint(map: WorldMap, local: Point, lift: number) {
+  const grid = gridAt(local, map.height, lift);
+  const tile = tileAt(map, grid.x, grid.y);
+  if (!tile || !insideDiamond(local, grid.x, grid.y, map.height, lift)) {
+    return undefined;
+  }
+  return tile;
+}
+
+function gridAt(local: Point, mapHeight: number, lift: number) {
+  const halfWidth = TILE_WIDTH / 2;
+  const halfHeight = TILE_HEIGHT / 2;
+  const centeredX = (local.x - mapHeight * halfWidth) / halfWidth;
+  const centeredY = (local.y - lift - halfHeight) / halfHeight;
+  return {
+    x: Math.round((centeredY + centeredX) / 2),
+    y: Math.round((centeredY - centeredX) / 2),
+  };
+}
+
+function insideDiamond(local: Point, gridX: number, gridY: number, mapHeight: number, lift: number) {
+  const point = isoPoint(gridX, gridY, mapHeight);
+  const dx = Math.abs(local.x - point.x) / (TILE_WIDTH / 2);
+  const dy = Math.abs(local.y - (point.y + TILE_HEIGHT / 2 + lift)) / (TILE_HEIGHT / 2);
+  return dx + dy <= 1;
+}
+
+function tileAt(map: WorldMap, x: number, y: number): WorldTile | undefined {
+  return map.tiles.find((tile) => tile.x === x && tile.y === y);
 }
 
 /** Scales the map to the host and centers it. Records that scale as the zoom baseline. */

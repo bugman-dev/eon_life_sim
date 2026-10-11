@@ -1,6 +1,16 @@
+import { useEffect } from "react";
 import { PinIcon, TreeArt, TreeIcon } from "../assets/icons";
+import { useAppState } from "../state/app-state";
 
 export default function SelectedItemData() {
+  const { state } = useAppState();
+
+  useEffect(() => {
+    if (state.selection) {
+      console.log(state.selection);
+    }
+  }, [state.selection]);
+
   return (
     <section className="eon-card eon-selected">
       <header>
