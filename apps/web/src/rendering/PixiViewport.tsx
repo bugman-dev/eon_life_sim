@@ -27,9 +27,9 @@ const PLANT_GROUND_AT = 0.65;
 const RESOURCE_GROUND_AT = 0.75;
 
 const VIEWPORT_BACKGROUND = "#d7efc8";
-/** Wheel zoom stays between half and sixteen times the fitted view. */
+/** Wheel zoom stays between half and sixty-four times the fitted view. */
 const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 16;
+const ZOOM_MAX = 64;
 const WHEEL_OUT = 0.9;
 const WHEEL_IN = 1.1;
 /** Pointer travel below this, in screen pixels, is a click. Past it, the gesture pans. */
