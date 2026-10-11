@@ -1,4 +1,4 @@
-import type { WorldMap, WorldTile } from "@life-simulator/shared";
+import type { DepositType, WorldMap, WorldTile } from "@life-simulator/shared";
 import type { Pool, PoolClient } from "pg";
 import type { GeneratedWorld } from "../world/generate.js";
 import {
@@ -30,14 +30,14 @@ type TileRow = {
   water_type: WorldTile["waterType"];
   soil_type: WorldTile["soilType"];
   fertility: number;
-  vegetation_type: WorldTile["vegetationType"];
-  vegetation_density: number;
 };
 
 type DepositRow = {
   x: number;
   y: number;
-  deposit_type: WorldTile["deposits"][number];
+  deposit_type: DepositType;
+  amount: number;
+  growth_stage: WorldTile["deposits"][number]["growthStage"];
 };
 
 export class PgWorldMapRepository implements WorldMapRepository {
@@ -79,14 +79,14 @@ export class PgWorldMapRepository implements WorldMapRepository {
     }
 
     const tileRows = await this.pool.query<TileRow>(
-      `SELECT x, y, terrain_type, elevation, water_type, soil_type, fertility, vegetation_type, vegetation_density
+      `SELECT x, y, terrain_type, elevation, water_type, soil_type, fertility
        FROM world_tiles
        WHERE world_id = $1
        ORDER BY y, x`,
       [worldId],
     );
     const depositRows = await this.pool.query<DepositRow>(
-      `SELECT x, y, deposit_type
+      `SELECT x, y, deposit_type, amount, growth_stage
        FROM world_resource_deposits
        WHERE world_id = $1
        ORDER BY y, x, deposit_type`,
@@ -96,7 +96,11 @@ export class PgWorldMapRepository implements WorldMapRepository {
     for (const row of depositRows.rows) {
       const key = `${row.x},${row.y}`;
       const current = deposits.get(key) ?? [];
-      current.push(row.deposit_type);
+      current.push({
+        type: row.deposit_type,
+        amount: Number(row.amount),
+        growthStage: Number(row.growth_stage) as DepositRow["growth_stage"],
+      });
       deposits.set(key, current);
     }
 
@@ -115,8 +119,7 @@ export class PgWorldMapRepository implements WorldMapRepository {
         waterType: row.water_type,
         soilType: row.soil_type,
         fertility: Number(row.fertility),
-        vegetationType: row.vegetation_type,
-        vegetationDensity: roundStored(row.vegetation_density),
+        vegetation: [],
         deposits: deposits.get(`${row.x},${row.y}`) ?? [],
       })),
     };
@@ -153,13 +156,12 @@ async function insertSession(client: PoolClient, session: NewWorldSession): Prom
 async function insertTiles(client: PoolClient, worldId: string, tiles: WorldTile[]) {
   await client.query(
     `INSERT INTO world_tiles (
-       world_id, x, y, terrain_type, elevation, water_type, soil_type, fertility, vegetation_type, vegetation_density
+       world_id, x, y, terrain_type, elevation, water_type, soil_type, fertility
      )
-     SELECT $1, tile.x, tile.y, tile.terrain_type, tile.elevation, tile.water_type, tile.soil_type,
-            tile.fertility, tile.vegetation_type, tile.vegetation_density
+     SELECT $1, tile.x, tile.y, tile.terrain_type, tile.elevation, tile.water_type, tile.soil_type, tile.fertility
      FROM unnest(
-       $2::int[], $3::int[], $4::text[], $5::float8[], $6::text[], $7::text[], $8::int[], $9::text[], $10::float8[]
-     ) AS tile(x, y, terrain_type, elevation, water_type, soil_type, fertility, vegetation_type, vegetation_density)`,
+       $2::int[], $3::int[], $4::text[], $5::float8[], $6::text[], $7::text[], $8::int[]
+     ) AS tile(x, y, terrain_type, elevation, water_type, soil_type, fertility)`,
     [
       worldId,
       tiles.map((tile) => tile.x),
@@ -169,8 +171,6 @@ async function insertTiles(client: PoolClient, worldId: string, tiles: WorldTile
       tiles.map((tile) => tile.waterType),
       tiles.map((tile) => tile.soilType),
       tiles.map((tile) => tile.fertility),
-      tiles.map((tile) => tile.vegetationType),
-      tiles.map((tile) => tile.vegetationDensity),
     ],
   );
 }
@@ -181,10 +181,18 @@ async function insertDeposits(client: PoolClient, worldId: string, tiles: WorldT
     return;
   }
   await client.query(
-    `INSERT INTO world_resource_deposits (world_id, x, y, deposit_type)
-     SELECT $1, deposit.x, deposit.y, deposit.deposit_type
-     FROM unnest($2::int[], $3::int[], $4::text[]) AS deposit(x, y, deposit_type)`,
-    [worldId, points.map((point) => point.x), points.map((point) => point.y), points.map((point) => point.deposit)],
+    `INSERT INTO world_resource_deposits (world_id, x, y, deposit_type, amount, growth_stage)
+     SELECT $1, deposit.x, deposit.y, deposit.deposit_type, deposit.amount, deposit.growth_stage
+     FROM unnest($2::int[], $3::int[], $4::text[], $5::int[], $6::int[])
+       AS deposit(x, y, deposit_type, amount, growth_stage)`,
+    [
+      worldId,
+      points.map((point) => point.x),
+      points.map((point) => point.y),
+      points.map((point) => point.deposit.type),
+      points.map((point) => point.deposit.amount),
+      points.map((point) => point.deposit.growthStage),
+    ],
   );
 }
 

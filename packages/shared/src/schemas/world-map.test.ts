@@ -12,8 +12,7 @@ function tile(x: number, y: number, patch: Partial<WorldTile> = {}): WorldTile {
     waterType: "none",
     soilType: "normal",
     fertility: 40,
-    vegetationType: "none",
-    vegetationDensity: 0,
+    vegetation: [],
     deposits: [],
     ...patch,
   };
@@ -41,5 +40,14 @@ describe("world map schema", () => {
     expect(worldMapSchema.safeParse(mapOf(tiles.slice(0, 63))).success).toBe(false);
     expect(worldMapSchema.safeParse(mapOf(tiles, 501, 8)).success).toBe(false);
     expect(worldMapSchema.safeParse(mapOf([tile(-1, 0), ...tiles.slice(1)])).success).toBe(false);
+
+    const withDeposit = tiles.map((entry, index) =>
+      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 250, growthStage: 3 }] }) : entry,
+    );
+    expect(worldMapSchema.safeParse(mapOf(withDeposit)).success).toBe(true);
+    const lowAmount = tiles.map((entry, index) =>
+      index === 1 ? tile(1, 0, { deposits: [{ type: "stone", amount: 99, growthStage: 3 }] }) : entry,
+    );
+    expect(worldMapSchema.safeParse(mapOf(lowAmount)).success).toBe(false);
   });
 });

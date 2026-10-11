@@ -12,9 +12,25 @@ export const waterTypeSchema = z.enum(["none", "lake", "river", "coast"]);
 
 export const soilTypeSchema = z.enum(["poor", "normal", "fertile"]);
 
-export const vegetationTypeSchema = z.enum(["none", "grass", "forest"]);
-
 export const depositTypeSchema = z.enum(["stone", "ore", "clay"]);
+
+/** Harvestable units stored on a deposit. Harvesting comes later. */
+export const MIN_DEPOSIT_AMOUNT = 100;
+export const MAX_DEPOSIT_AMOUNT = 500;
+
+/**
+ * Growth stages are 1 new, 2 growing, and 3 mature.
+ * Deposits are stored mature. Vegetation will use the earlier stages later.
+ */
+export const DEPOSIT_GROWTH_STAGE = 3 as const;
+
+export const resourceDepositSchema = z
+  .object({
+    type: depositTypeSchema,
+    amount: z.number().int().min(MIN_DEPOSIT_AMOUNT).max(MAX_DEPOSIT_AMOUNT),
+    growthStage: z.literal(DEPOSIT_GROWTH_STAGE),
+  })
+  .strict();
 
 export const worldTileSchema = z
   .object({
@@ -25,9 +41,9 @@ export const worldTileSchema = z
     waterType: waterTypeSchema,
     soilType: soilTypeSchema,
     fertility: z.number().int().min(0).max(100),
-    vegetationType: vegetationTypeSchema,
-    vegetationDensity: z.number().min(0).max(1),
-    deposits: z.array(depositTypeSchema).max(3),
+    /** Empty until plants are generated. Each plant will carry its own growth stage. */
+    vegetation: z.array(z.never()),
+    deposits: z.array(resourceDepositSchema).max(1),
   })
   .strict();
 
@@ -77,7 +93,7 @@ export const worldMapSchema = z
 export type TerrainType = z.infer<typeof terrainTypeSchema>;
 export type WaterType = z.infer<typeof waterTypeSchema>;
 export type SoilType = z.infer<typeof soilTypeSchema>;
-export type VegetationType = z.infer<typeof vegetationTypeSchema>;
 export type DepositType = z.infer<typeof depositTypeSchema>;
+export type ResourceDeposit = z.infer<typeof resourceDepositSchema>;
 export type WorldTile = z.infer<typeof worldTileSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;

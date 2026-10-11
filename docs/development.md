@@ -20,6 +20,7 @@ Current migrations:
 - `003_world_map.sql` adds generation metadata, tiles, and static resource deposits.
 - `004_world_size_limit.sql` raises the stored map side from 128 to 500.
 - `005_flat_terrain.sql` keeps terrain as grass, dirt, sand, and water, and clears elevation, vegetation, and deposits.
+- `006_deposit_yield.sql` stores a harvestable amount and a mature growth stage on each deposit, and drops the unused vegetation columns. Existing deposits are backfilled as amount 100 and growth stage 3.
 
 The server reads `.env` from the repository root. `DATABASE_URL` must use `localhost` for this workflow. Compose overrides that URL to the `db` hostname inside the server container.
 
@@ -69,7 +70,7 @@ A world created before this migration has no map. Opening it shows “This world
 }
 ```
 
-`2` means about 2 of every 100 land tiles are stone. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Restart the server after editing the file. Worlds already saved keep the deposits they were created with.
+`2` means about 2 of every 100 land tiles are stone. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Each pile also stores a harvestable amount from 100 to 500 and growth stage 3. The same seed gives the same amounts. Restart the server after editing the file. Worlds already saved keep the deposits they were created with. Run `npm run db:migrate` before creating a world that stores those amounts.
 
 ## UI live reload
 

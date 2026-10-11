@@ -1,5 +1,8 @@
 import {
+  DEPOSIT_GROWTH_STAGE,
+  MAX_DEPOSIT_AMOUNT,
   MAX_WORLD_SIZE,
+  MIN_DEPOSIT_AMOUNT,
   MIN_WORLD_SIZE,
   WORLD_GENERATION_VERSION,
   WORLD_TILE_SIZE,
@@ -36,8 +39,9 @@ export function assertDimensions(width: number, height: number): void {
 
 /**
  * Checks the map the pipeline is allowed to emit.
- * Both land and water are required. Elevation and vegetation stay empty.
+ * Both land and water are required. Elevation stays 0 and the vegetation list stays empty.
  * A tile holds at most one deposit. Clay is only on dirt, and water holds none.
+ * A deposit amount is a whole number from 100 to 500, and its growth stage is mature.
  */
 export function assertWorld(world: GeneratedWorld): void {
   if (world.generationVersion !== WORLD_GENERATION_VERSION) {
@@ -56,16 +60,19 @@ export function assertWorld(world: GeneratedWorld): void {
       throw new GenerationError("Tile coordinates must be unique and inside the map.");
     }
     seen.add(key);
-    if (tile.elevation !== 0 || tile.fertility !== 0 || tile.vegetationDensity !== 0 || tile.vegetationType !== "none") {
+    if (tile.elevation !== 0 || tile.fertility !== 0 || tile.vegetation.length !== 0) {
       throw new GenerationError("Elevation, fertility, and vegetation are not generated yet.");
     }
-    if (tile.deposits.length > 1 || new Set(tile.deposits).size !== tile.deposits.length) {
+    if (tile.deposits.length > 1 || new Set(tile.deposits.map((deposit) => deposit.type)).size !== tile.deposits.length) {
       throw new GenerationError("A tile can hold one deposit.");
+    }
+    if (tile.deposits.some((deposit) => !validDeposit(deposit))) {
+      throw new GenerationError("A deposit amount must be from 100 to 500, and its growth stage is mature.");
     }
     if (tile.terrainType === "water" && tile.deposits.length > 0) {
       throw new GenerationError("A water tile cannot hold a deposit.");
     }
-    if (tile.deposits.includes("clay") && tile.terrainType !== "dirt") {
+    if (tile.deposits.some((deposit) => deposit.type === "clay") && tile.terrainType !== "dirt") {
       throw new GenerationError("Clay can only sit on dirt.");
     }
     if ((tile.terrainType === "water") !== (tile.waterType !== "none")) {
@@ -81,4 +88,13 @@ export function assertWorld(world: GeneratedWorld): void {
   if (water === 0 || land === 0) {
     throw new GenerationError("The map must contain both land and water.");
   }
+}
+
+function validDeposit(deposit: WorldTile["deposits"][number]) {
+  return (
+    Number.isInteger(deposit.amount) &&
+    deposit.amount >= MIN_DEPOSIT_AMOUNT &&
+    deposit.amount <= MAX_DEPOSIT_AMOUNT &&
+    deposit.growthStage === DEPOSIT_GROWTH_STAGE
+  );
 }

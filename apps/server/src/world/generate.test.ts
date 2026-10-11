@@ -40,7 +40,7 @@ describe("world generation", () => {
     expect(grass).toBeGreaterThan(land.length / 2);
     expect(
       first.tiles.every(
-        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetationType === "none" && tile.vegetationDensity === 0,
+        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetation.length === 0,
       ),
     ).toBe(true);
   });
@@ -51,9 +51,9 @@ describe("world generation", () => {
     }
 
     const mapped = generateWorld({ seed: 7n });
-    expect(mapped.tiles.some((tile) => tile.deposits[0] === "stone")).toBe(true);
-    expect(mapped.tiles.some((tile) => tile.deposits[0] === "ore")).toBe(true);
-    expect(mapped.tiles.some((tile) => tile.deposits[0] === "clay")).toBe(true);
+    expect(mapped.tiles.some((tile) => tile.deposits[0]?.type === "stone")).toBe(true);
+    expect(mapped.tiles.some((tile) => tile.deposits[0]?.type === "ore")).toBe(true);
+    expect(mapped.tiles.some((tile) => tile.deposits[0]?.type === "clay")).toBe(true);
   });
 
   it("places each deposit up to its share of the land", () => {
@@ -61,7 +61,7 @@ describe("world generation", () => {
     const world = generateWorld({ seed: 7n, deposits });
     const land = world.tiles.filter((tile) => tile.terrainType !== "water").length;
     const target = (percent: number) => Math.round((land * percent) / 100);
-    const count = (type: "stone" | "ore" | "clay") => world.tiles.filter((tile) => tile.deposits[0] === type).length;
+    const count = (type: "stone" | "ore" | "clay") => world.tiles.filter((tile) => tile.deposits[0]?.type === type).length;
 
     expect(count("stone")).toBe(target(deposits.stone));
     expect(count("ore")).toBe(target(deposits.ore));
@@ -95,9 +95,14 @@ describe("world generation", () => {
 
 function expectDepositPlacement(world: GeneratedWorld) {
   const distance = stepsFromWater(world.tiles);
-  const stone = world.tiles.filter((tile) => tile.deposits[0] === "stone");
-  const ore = world.tiles.filter((tile) => tile.deposits[0] === "ore");
-  const clay = world.tiles.filter((tile) => tile.deposits[0] === "clay");
+  const stone = world.tiles.filter((tile) => tile.deposits[0]?.type === "stone");
+  const ore = world.tiles.filter((tile) => tile.deposits[0]?.type === "ore");
+  const clay = world.tiles.filter((tile) => tile.deposits[0]?.type === "clay");
+  const placed = world.tiles.flatMap((tile) => tile.deposits);
+
+  expect(placed.every((deposit) => deposit.growthStage === 3)).toBe(true);
+  expect(placed.every((deposit) => Number.isInteger(deposit.amount) && deposit.amount >= 100 && deposit.amount <= 500)).toBe(true);
+  expect(new Set(placed.map((deposit) => deposit.amount)).size).toBeGreaterThan(1);
 
   expect(world.tiles.every((tile) => tile.deposits.length <= 1)).toBe(true);
   expect(world.tiles.filter((tile) => tile.terrainType === "water").every((tile) => tile.deposits.length === 0)).toBe(true);

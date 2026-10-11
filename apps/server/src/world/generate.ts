@@ -22,8 +22,9 @@ export type GenerateWorldInput = {
 /**
  * Builds a seeded island of grass, dirt, sand, and water.
  * The same seed and size always produce the same tiles.
- * Stored elevation stays 0. Vegetation stays empty.
- * Stone, ore, and clay are static deposits. Their amounts are a percent of the land.
+ * Stored elevation stays 0. The vegetation list stays empty.
+ * Stone, ore, and clay are static deposits. How many piles appear is a percent of the land.
+ * Each pile stores a harvestable amount and a mature growth stage.
  */
 export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   const width = input.width ?? DEFAULT_WORLD_SIZE;
@@ -63,8 +64,7 @@ function toTile(sample: Sample): WorldTile {
     waterType: water ? sample.waterType : "none",
     soilType: water ? "poor" : "normal",
     fertility: 0,
-    vegetationType: "none",
-    vegetationDensity: 0,
+    vegetation: [],
     deposits: [...sample.deposits],
   };
 }

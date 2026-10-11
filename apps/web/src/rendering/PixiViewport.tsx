@@ -402,7 +402,7 @@ function buildTileLayer(
     const ground = terrainTextures[tile.terrain][frameIndex(tile.terrain, map.seed, x, y)];
     layer.addChild(createTileSprite(pixi, ground, x, y, map.height, lift));
     for (const deposit of tile.deposits) {
-      const texture = depositTextures[deposit][depositVariant(map.seed, x, y, deposit)];
+      const texture = depositTextures[deposit.type][depositVariant(map.seed, x, y, deposit.type)];
       layer.addChild(createDepositSprite(pixi, texture, x, y, map.height, lift));
     }
   });
@@ -412,7 +412,7 @@ function buildTileLayer(
 /** Walks stored tiles from back to front. The diagonal sum x + y is the draw order. */
 function forEachTile(
   map: WorldMap,
-  visit: (x: number, y: number, tile: { terrain: TerrainType; deposits: DepositType[] }) => void,
+  visit: (x: number, y: number, tile: { terrain: TerrainType; deposits: WorldTile["deposits"] }) => void,
 ) {
   const tiles = new Map(
     map.tiles.map((tile) => [`${tile.x},${tile.y}`, { terrain: tile.terrainType, deposits: tile.deposits }]),
@@ -597,8 +597,8 @@ function depositAt(map: WorldMap, local: Point, lift: number): { x: number; y: n
       continue;
     }
     for (const deposit of tile.deposits) {
-      if (insideDeposit(map, local, candidate.x, candidate.y, deposit, lift)) {
-        hit = { x: candidate.x, y: candidate.y, deposit };
+      if (insideDeposit(map, local, candidate.x, candidate.y, deposit.type, lift)) {
+        hit = { x: candidate.x, y: candidate.y, deposit: deposit.type };
       }
     }
   }

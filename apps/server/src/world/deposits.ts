@@ -1,4 +1,10 @@
-import type { DepositType } from "@life-simulator/shared";
+import {
+  DEPOSIT_GROWTH_STAGE,
+  MAX_DEPOSIT_AMOUNT,
+  MIN_DEPOSIT_AMOUNT,
+  type DepositType,
+  type ResourceDeposit,
+} from "@life-simulator/shared";
 import { distanceFrom, type MapGrid, type Sample } from "./grid.js";
 import { mixSeed } from "./prng.js";
 
@@ -36,15 +42,22 @@ export function assignDeposits(grid: MapGrid, seed: bigint, percents: DepositPer
   const clayTarget = target(percents.clay);
   const nearClay = clayOptions(grid, seed, land, waterSteps).filter((sample) => withinNearWater(grid, waterSteps, sample));
   const farClay = clayOptions(grid, seed, land, waterSteps).filter((sample) => !withinNearWater(grid, waterSteps, sample));
-  placeDeposits(grid, "clay", clayTarget, nearClay, blocked);
-  const nearPlaced = grid.samples.filter((sample) => sample.deposits[0] === "clay").length;
+  placeDeposits(grid, seed, "clay", clayTarget, nearClay, blocked);
+  const nearPlaced = grid.samples.filter((sample) => sample.deposits[0]?.type === "clay").length;
   const farRoom = Math.min(Math.max(0, clayTarget - nearPlaced), Math.max(0, nearPlaced - 1));
-  placeDeposits(grid, "clay", farRoom, farClay, blocked);
-  placeDeposits(grid, "ore", target(percents.ore), mineralOptions(seed, land), blocked);
-  placeDeposits(grid, "stone", target(percents.stone), mineralOptions(seed, land), blocked);
+  placeDeposits(grid, seed, "clay", farRoom, farClay, blocked);
+  placeDeposits(grid, seed, "ore", target(percents.ore), mineralOptions(seed, land), blocked);
+  placeDeposits(grid, seed, "stone", target(percents.stone), mineralOptions(seed, land), blocked);
 }
 
-function placeDeposits(grid: MapGrid, type: DepositType, count: number, options: Sample[], blocked: Uint8Array) {
+function placeDeposits(
+  grid: MapGrid,
+  seed: bigint,
+  type: DepositType,
+  count: number,
+  options: Sample[],
+  blocked: Uint8Array,
+) {
   let placed = 0;
   for (const sample of options) {
     if (placed >= count) {
@@ -53,10 +66,17 @@ function placeDeposits(grid: MapGrid, type: DepositType, count: number, options:
     if (sample.deposits.length > 0 || blocked[indexOf(grid, sample)] !== 0) {
       continue;
     }
-    sample.deposits = [type];
+    sample.deposits = [depositRecord(seed, sample, type)];
     closeAround(grid, blocked, sample);
     placed += 1;
   }
+}
+
+/** A seeded yield from 100 through 500. The same tile and deposit always get the same amount. Growth stays mature. */
+function depositRecord(seed: bigint, sample: Sample, type: DepositType): ResourceDeposit {
+  const span = MAX_DEPOSIT_AMOUNT - MIN_DEPOSIT_AMOUNT + 1;
+  const amount = MIN_DEPOSIT_AMOUNT + (mixSeed(seed, `deposit-amount:${type}:${sample.x}:${sample.y}`) % span);
+  return { type, amount, growthStage: DEPOSIT_GROWTH_STAGE };
 }
 
 /** All dirt, closest to water first. A hash spreads tiles that are equally close. */

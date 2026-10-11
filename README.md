@@ -59,4 +59,4 @@ npm run typecheck
 - Creating a world always creates a new session. Refreshing the browser reloads the last session id saved in the browser.
 - Restarting the server returns every session paused at its last saved tick.
 - Delete Current World removes that world's session, map, tiles, and deposits. Step, the side navigation, and the stat cards are present for later work. They do not change the simulation.
-- AI, elevation, and vegetation come later. A generated map is grass, dirt, and sand in the ocean, with stone, ore, and clay piles on the tiles that hold those deposits.
+- AI, elevation, and vegetation come later. A generated map is grass, dirt, and sand in the ocean, with stone, ore, and clay piles. Each pile stores a harvestable amount and is mature.
