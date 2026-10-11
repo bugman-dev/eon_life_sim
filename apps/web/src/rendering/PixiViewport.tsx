@@ -62,6 +62,16 @@ type PixiViewportProps = {
   status: string | null;
 };
 
+/** Keyed atlas canvases, kept so a click can copy the same pixels the map drew. */
+type KeyedCanvases = {
+  terrain: HTMLCanvasElement;
+  deposits: HTMLCanvasElement;
+  trees: HTMLCanvasElement;
+  shrubs: HTMLCanvasElement;
+  flowers: HTMLCanvasElement;
+  grass: HTMLCanvasElement;
+};
+
 /** Owns one keyed sheet and the frame textures cut from it. */
 type SpriteSheet<Key extends string> = {
   cut: (pixi: Pixi, source: Texture) => Record<Key, Texture[]>;
@@ -194,6 +204,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   const cameraRef = useRef<Camera>(emptyCamera());
   const mapRef = useRef<WorldMap | null>(map);
   mapRef.current = map;
+  const canvasesRef = useRef<KeyedCanvases | null>(null);
   const { select, clearSelection } = useAppState();
   const selectRef = useRef(select);
   selectRef.current = select;
@@ -209,7 +220,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
     let cancelled = false;
     let stop: (() => void) | undefined;
 
-    void startApplication(host, worldRef, cameraRef, mapRef, selectRef, () => cancelled, (release) => {
+    void startApplication(host, worldRef, cameraRef, mapRef, canvasesRef, selectRef, () => cancelled, (release) => {
       stop = release;
       setReady(true);
     }).catch((caught: unknown) => {
@@ -257,6 +268,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
       world,
       map,
       camera,
+      canvasesRef,
       { terrain: terrainSheet, deposits: depositSheet, trees: treeSheet, shrubs: shrubSheet, flowers: flowerSheet, grass: grassSheet },
       () => cancelled || worldRef.current !== world,
     ).catch((caught: unknown) => {
@@ -267,6 +279,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
 
     return () => {
       cancelled = true;
+      canvasesRef.current = null;
       clearSprites(world);
       for (const sheet of sheets) {
         sheet.release();
@@ -291,6 +304,7 @@ async function startApplication(
   worldRef: RefBox<Container | null>,
   cameraRef: RefBox<Camera>,
   mapRef: RefBox<WorldMap | null>,
+  canvasesRef: RefBox<KeyedCanvases | null>,
   selectRef: RefBox<(selection: Selection) => void>,
   isCancelled: () => boolean,
   onReady: (release: () => void) => void,
@@ -310,7 +324,7 @@ async function startApplication(
   application.stage.addChild(world);
   host.appendChild(application.canvas);
   worldRef.current = world;
-  const unbindCamera = bindCamera(host, worldRef, cameraRef, mapRef, selectRef);
+  const unbindCamera = bindCamera(host, worldRef, cameraRef, mapRef, canvasesRef, selectRef);
 
   onReady(() => {
     unbindCamera();
@@ -325,6 +339,7 @@ function bindCamera(
   worldRef: RefBox<Container | null>,
   cameraRef: RefBox<Camera>,
   mapRef: RefBox<WorldMap | null>,
+  canvasesRef: RefBox<KeyedCanvases | null>,
   selectRef: RefBox<(selection: Selection) => void>,
 ) {
   const drag = { active: false, x: 0, y: 0, startX: 0, startY: 0 };
@@ -357,7 +372,7 @@ function bindCamera(
     drag.active = false;
     const moved = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
     if (moved <= CLICK_SLOP) {
-      selectAtPointer(host, worldRef.current, mapRef.current, event.clientX, event.clientY, selectRef.current);
+      selectAtPointer(host, worldRef.current, mapRef.current, canvasesRef.current, event.clientX, event.clientY, selectRef.current);
     }
   };
   const onCancel = () => {
@@ -396,6 +411,7 @@ async function paintMap(
   world: Container,
   map: WorldMap,
   camera: Camera,
+  canvasesRef: RefBox<KeyedCanvases | null>,
   sheets: {
     terrain: SpriteSheet<TerrainType>;
     deposits: SpriteSheet<DepositType>;
@@ -407,28 +423,36 @@ async function paintMap(
   isStale: () => boolean,
 ) {
   const pixi = await import("pixi.js");
-  const [terrainSource, depositSource, treeSource, shrubSource, flowerSource, grassSource] = await Promise.all([
-    loadKeyedSheet(tilesetUrl, pixi),
-    loadKeyedSheet(depositUrl, pixi),
-    loadKeyedSheet(treesUrl, pixi),
-    loadKeyedSheet(shrubsUrl, pixi),
-    loadKeyedSheet(flowersUrl, pixi),
-    loadKeyedSheet(grassPlantsUrl, pixi),
+  const [terrainCanvas, depositCanvas, treeCanvas, shrubCanvas, flowerCanvas, grassCanvas] = await Promise.all([
+    loadKeyedCanvas(tilesetUrl),
+    loadKeyedCanvas(depositUrl),
+    loadKeyedCanvas(treesUrl),
+    loadKeyedCanvas(shrubsUrl),
+    loadKeyedCanvas(flowersUrl),
+    loadKeyedCanvas(grassPlantsUrl),
   ]);
   if (isStale()) {
     releaseSheets(sheets);
     return;
   }
-  const terrainTextures = sheets.terrain.cut(pixi, terrainSource);
-  const depositTextures = sheets.deposits.cut(pixi, depositSource);
-  const treeTextures = sheets.trees.cut(pixi, treeSource);
-  const shrubTextures = sheets.shrubs.cut(pixi, shrubSource);
-  const flowerTextures = sheets.flowers.cut(pixi, flowerSource);
-  const grassTextures = sheets.grass.cut(pixi, grassSource);
+  const terrainTextures = sheets.terrain.cut(pixi, pixi.Texture.from(terrainCanvas));
+  const depositTextures = sheets.deposits.cut(pixi, pixi.Texture.from(depositCanvas));
+  const treeTextures = sheets.trees.cut(pixi, pixi.Texture.from(treeCanvas));
+  const shrubTextures = sheets.shrubs.cut(pixi, pixi.Texture.from(shrubCanvas));
+  const flowerTextures = sheets.flowers.cut(pixi, pixi.Texture.from(flowerCanvas));
+  const grassTextures = sheets.grass.cut(pixi, pixi.Texture.from(grassCanvas));
   if (isStale()) {
     releaseSheets(sheets);
     return;
   }
+  canvasesRef.current = {
+    terrain: terrainCanvas,
+    deposits: depositCanvas,
+    trees: treeCanvas,
+    shrubs: shrubCanvas,
+    flowers: flowerCanvas,
+    grass: grassCanvas,
+  };
 
   world.addChild(
     buildTileLayer(pixi, map, terrainTextures, depositTextures, {
@@ -631,11 +655,11 @@ function plantVariant(seed: string, x: number, y: number, plant: VegetationType)
 }
 
 /** Decodes an atlas and removes its flat background. */
-async function loadKeyedSheet(url: string, pixi: Pixi) {
+async function loadKeyedCanvas(url: string) {
   const image = new Image();
   image.src = url;
   await image.decode();
-  return pixi.Texture.from(keyOutBackground(image));
+  return keyOutBackground(image);
 }
 
 function keyOutBackground(image: HTMLImageElement) {
@@ -703,11 +727,12 @@ function isoPoint(gridX: number, gridY: number, mapHeight: number): Point {
   };
 }
 
-/** Stores the diamond under the pointer. Pictures do not take the click. */
+/** Stores the diamond under the pointer, plus the sprites drawn on it. Pictures do not take the click. */
 function selectAtPointer(
   host: HTMLElement,
   world: Container | null,
   map: WorldMap | null,
+  canvases: KeyedCanvases | null,
   clientX: number,
   clientY: number,
   select: (selection: Selection) => void,
@@ -724,7 +749,55 @@ function selectAtPointer(
   if (!tile) {
     return;
   }
-  select({ tile });
+  const deposit = tile.deposits[0];
+  const vegitation = tile.vegitation[0];
+  const resource = deposit && vegitation ? { deposit, vegitation } : deposit ? { deposit } : vegitation ? { vegitation } : null;
+  select({ tile, pictures: tilePictures(canvases, map, tile), resource });
+}
+
+/** Copies the terrain, deposit, and plant frames that this tile uses on the map. */
+function tilePictures(canvases: KeyedCanvases | null, map: WorldMap, tile: WorldTile): Selection["pictures"] {
+  if (!canvases) {
+    return { terrain: null, deposit: null, vegetation: null };
+  }
+  const ground = terrainFrames[tile.terrainType][frameIndex(tile.terrainType, map.seed, tile.x, tile.y)];
+  const deposit = tile.deposits[0];
+  const plant = tile.vegitation[0];
+  return {
+    terrain: frameDataUrl(canvases.terrain, ground),
+    deposit: deposit
+      ? frameDataUrl(canvases.deposits, depositFrames[deposit.type][depositVariant(map.seed, tile.x, tile.y, deposit.type)])
+      : null,
+    vegetation: plant ? vegetationDataUrl(canvases, map.seed, tile.x, tile.y, plant) : null,
+  };
+}
+
+function vegetationDataUrl(canvases: KeyedCanvases, seed: string, x: number, y: number, plant: WorldTile["vegitation"][number]) {
+  const index = plantVariant(seed, x, y, plant.type);
+  if (plant.type === "tree") {
+    const frames = plant.growthStage === 3 ? largeTreeFrames : smallTreeFrames;
+    return frameDataUrl(canvases.trees, frames[index]);
+  }
+  if (plant.type === "shrubs") {
+    return frameDataUrl(canvases.shrubs, shrubFrames[index]);
+  }
+  if (plant.type === "flowers") {
+    return frameDataUrl(canvases.flowers, flowerFrames[index]);
+  }
+  return frameDataUrl(canvases.grass, grassPlantFrames[index]);
+}
+
+/** Crops one atlas frame into a PNG the card can show. */
+function frameDataUrl(sheet: HTMLCanvasElement, frame: Frame) {
+  const canvas = document.createElement("canvas");
+  canvas.width = frame.width;
+  canvas.height = frame.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return null;
+  }
+  context.drawImage(sheet, frame.x, frame.y, frame.width, frame.height, 0, 0, frame.width, frame.height);
+  return canvas.toDataURL("image/png");
 }
 
 /** The diamond that contains the point, when the point is inside that diamond. */

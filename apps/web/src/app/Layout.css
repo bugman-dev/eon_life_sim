@@ -672,6 +672,10 @@
   font-weight: 650;
 }
 
+.eon .eon-selected button {
+  cursor: pointer;
+}
+
 .eon-timeline-row {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -819,6 +823,15 @@
   overflow: auto;
 }
 
+.eon-selected {
+  display: flex;
+  flex-direction: column;
+}
+
+.eon-selected > .eon-primary {
+  flex: 0 0 auto;
+}
+
 .eon-selected-title {
   display: flex;
   gap: 10px;
@@ -854,6 +867,23 @@
   color: var(--blue);
 }
 
+.eon-tab-panel {
+  height: 335px;
+  overflow: auto;
+}
+
+.eon-notes {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+.eon-tab-panel > .eon-notes:only-child {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+
 .eon-tree-art {
   display: grid;
   place-items: center;
@@ -867,6 +897,28 @@
 .eon-tree-art svg {
   width: 120px;
   height: 90px;
+}
+
+.eon-tree-badge img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.eon-tile-picture {
+  position: relative;
+  width: 88px;
+  height: 96px;
+}
+
+.eon-tile-picture img {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
 }
 
 .eon-facts {

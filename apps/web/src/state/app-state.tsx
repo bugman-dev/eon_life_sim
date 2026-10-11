@@ -2,12 +2,32 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import type { WorldTile } from "@life-simulator/shared";
 
 /**
+ * PNG data URLs of the sprites drawn for the selected tile.
+ * terrain is the diamond. deposit and vegetation are set when that sprite was drawn.
+ */
+export type SelectionPictures = {
+  terrain: string | null;
+  deposit: string | null;
+  vegetation: string | null;
+};
+
+/**
+ * The deposit or plant on the selected tile.
+ * A tile can carry one of each, and this keeps whichever of them is present.
+ */
+export type SelectionResource =
+  | { deposit: WorldTile["deposits"][number]; vegitation?: WorldTile["vegitation"][number] }
+  | { vegitation: WorldTile["vegitation"][number]; deposit?: WorldTile["deposits"][number] };
+
+/**
  * The one selected map item.
- * A click stores the tile under the pointer. The tile carries its deposit and plant.
+ * A click stores the tile under the pointer and the pictures drawn on it.
  * A new click replaces the previous tile.
  */
 export type Selection = {
   tile: WorldTile;
+  pictures: SelectionPictures;
+  resource: SelectionResource | null;
 };
 
 /**
