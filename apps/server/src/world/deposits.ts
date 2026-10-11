@@ -1,131 +1,87 @@
 import type { DepositType } from "@life-simulator/shared";
-import { distanceFrom, sampleAt, type MapGrid, type Sample } from "./grid.js";
+import { distanceFrom, type MapGrid, type Sample } from "./grid.js";
 import { mixSeed } from "./prng.js";
 
-/** Candidate slots. One cell holds at most one deposit. */
-const CELL = 6;
+/** Percent of land tiles (grass, dirt, and sand) for each deposit. */
+export type DepositPercents = {
+  stone: number;
+  ore: number;
+  clay: number;
+};
+
+/** Matches worldConfig.json. Callers that omit a config use these amounts. */
+export const DEFAULT_DEPOSIT_PERCENTS: DepositPercents = {
+  stone: 2,
+  ore: 0.5,
+  clay: 0.2,
+};
+
 /** Chebyshev steps required between two deposits, so piles do not sit on neighboring tiles. */
 const MIN_GAP = 3;
-/** Chance a cell is left empty, so the scatter is not a perfect lattice. */
-const CELL_SKIP = 0.28;
-/** Dirt this close to water is the usual place for clay. */
+/** Dirt this close to water is preferred for clay. */
 const NEAR_WATER_STEPS = 12;
-const CLAY_NEAR_CHANCE = 0.85;
-const CLAY_FAR_CHANCE = 0.15;
-/** Share of grass placements that are ore instead of stone. */
-const ORE_ON_GRASS = 0.18;
-/** Sand and dirt receive a mineral less often, and ore less often still. */
-const MINERAL_WITHOUT_GRASS = 0.3;
-const ORE_ELSEWHERE = 0.08;
 
 /**
- * Scatters one static deposit across the land.
- * Stone and ore can sit on any land, and most of them sit on grass.
- * Clay sits only on dirt, and most of it sits near a water body.
+ * Places static deposits up to a percent of the land.
+ * Clay is only on dirt. Dirt near water is used first, and farther dirt is added only while most clay stays near water.
  * A tile keeps a single deposit, and deposits stay a few tiles apart. Water stays empty.
+ * A target that cannot fit is filled only as far as the terrain and the gap allow.
  */
-export function assignDeposits(grid: MapGrid, seed: bigint): void {
+export function assignDeposits(grid: MapGrid, seed: bigint, percents: DepositPercents = DEFAULT_DEPOSIT_PERCENTS): void {
   const waterSteps = distanceFrom(grid, (sample) => sample.terrain === "water");
+  const land = grid.samples.filter((sample) => sample.terrain !== "water");
   const blocked = new Uint8Array(grid.samples.length);
-  const cells = cellOrder(grid, seed);
+  const target = (percent: number) => Math.round((land.length * percent) / 100);
 
-  for (const cell of cells) {
-    const plan = planCell(grid, seed, cell.x, cell.y, waterSteps);
-    if (!plan) {
+  const clayTarget = target(percents.clay);
+  const nearClay = clayOptions(grid, seed, land, waterSteps).filter((sample) => withinNearWater(grid, waterSteps, sample));
+  const farClay = clayOptions(grid, seed, land, waterSteps).filter((sample) => !withinNearWater(grid, waterSteps, sample));
+  placeDeposits(grid, "clay", clayTarget, nearClay, blocked);
+  const nearPlaced = grid.samples.filter((sample) => sample.deposits[0] === "clay").length;
+  const farRoom = Math.min(Math.max(0, clayTarget - nearPlaced), Math.max(0, nearPlaced - 1));
+  placeDeposits(grid, "clay", farRoom, farClay, blocked);
+  placeDeposits(grid, "ore", target(percents.ore), mineralOptions(seed, land), blocked);
+  placeDeposits(grid, "stone", target(percents.stone), mineralOptions(seed, land), blocked);
+}
+
+function placeDeposits(grid: MapGrid, type: DepositType, count: number, options: Sample[], blocked: Uint8Array) {
+  let placed = 0;
+  for (const sample of options) {
+    if (placed >= count) {
+      return;
+    }
+    if (sample.deposits.length > 0 || blocked[indexOf(grid, sample)] !== 0) {
       continue;
     }
-    const sample = plan.options.find((option) => blocked[indexOf(grid, option)] === 0);
-    if (!sample) {
-      continue;
-    }
-    sample.deposits = [plan.type];
+    sample.deposits = [type];
     closeAround(grid, blocked, sample);
+    placed += 1;
   }
 }
 
-function cellOrder(grid: MapGrid, seed: bigint) {
-  const cells: { x: number; y: number; rank: number }[] = [];
-  for (let y = 0; y < grid.height; y += CELL) {
-    for (let x = 0; x < grid.width; x += CELL) {
-      cells.push({ x, y, rank: mixSeed(seed, `deposit-cell:${x}:${y}`) });
-    }
-  }
-  cells.sort((a, b) => b.rank - a.rank || a.y - b.y || a.x - b.x);
-  return cells;
+/** All dirt, closest to water first. A hash spreads tiles that are equally close. */
+function clayOptions(grid: MapGrid, seed: bigint, land: Sample[], waterSteps: Int16Array) {
+  return land
+    .filter((sample) => sample.terrain === "dirt")
+    .sort((a, b) => {
+      const steps = (waterSteps[indexOf(grid, a)] ?? 99) - (waterSteps[indexOf(grid, b)] ?? 99);
+      if (steps !== 0) {
+        return steps;
+      }
+      return mixSeed(seed, `deposit-pick:${b.x}:${b.y}`) - mixSeed(seed, `deposit-pick:${a.x}:${a.y}`);
+    });
 }
 
-/** Decides which deposit a cell wants, and the tiles it may use, best first. */
-function planCell(
-  grid: MapGrid,
-  seed: bigint,
-  cellX: number,
-  cellY: number,
-  waterSteps: Int16Array,
-): { type: DepositType; options: Sample[] } | undefined {
-  if (unit(seed, `deposit-keep:${cellX}:${cellY}`) < CELL_SKIP) {
-    return undefined;
-  }
-
-  const land = tilesInCell(grid, cellX, cellY);
-  if (land.length === 0) {
-    return undefined;
-  }
-
-  const dirt = land.filter((sample) => sample.terrain === "dirt");
-  const near = dirt.filter((sample) => withinNearWater(grid, waterSteps, sample));
-  const kind = unit(seed, `deposit-kind:${cellX}:${cellY}`);
-  if (near.length > 0 && kind < CLAY_NEAR_CHANCE) {
-    return { type: "clay", options: byWaterThenHash(grid, seed, near, waterSteps) };
-  }
-  if (near.length === 0 && dirt.length > 0 && kind < CLAY_FAR_CHANCE) {
-    return { type: "clay", options: byHash(seed, dirt) };
-  }
-
+/** Grass first, then sand and dirt, each group in a seeded order. */
+function mineralOptions(seed: bigint, land: Sample[]) {
   const grass = land.filter((sample) => sample.terrain === "grass");
   const elsewhere = land.filter((sample) => sample.terrain !== "grass");
-  if (grass.length > 0) {
-    return { type: mineralType(seed, cellX, cellY, true), options: byHash(seed, grass) };
-  }
-  if (elsewhere.length > 0 && unit(seed, `deposit-elsewhere:${cellX}:${cellY}`) < MINERAL_WITHOUT_GRASS) {
-    return { type: mineralType(seed, cellX, cellY, false), options: byHash(seed, elsewhere) };
-  }
-  return undefined;
-}
-
-function mineralType(seed: bigint, cellX: number, cellY: number, grass: boolean): DepositType {
-  const cut = grass ? ORE_ON_GRASS : ORE_ELSEWHERE;
-  return unit(seed, `deposit-ore:${cellX}:${cellY}`) < cut ? "ore" : "stone";
-}
-
-function tilesInCell(grid: MapGrid, cellX: number, cellY: number) {
-  const found: Sample[] = [];
-  const xEnd = Math.min(grid.width, cellX + CELL);
-  const yEnd = Math.min(grid.height, cellY + CELL);
-  for (let y = cellY; y < yEnd; y += 1) {
-    for (let x = cellX; x < xEnd; x += 1) {
-      const sample = sampleAt(grid, x, y);
-      if (sample && sample.terrain !== "water") {
-        found.push(sample);
-      }
-    }
-  }
-  return found;
+  return [...byHash(seed, grass), ...byHash(seed, elsewhere)];
 }
 
 function withinNearWater(grid: MapGrid, waterSteps: Int16Array, sample: Sample) {
   const steps = waterSteps[indexOf(grid, sample)] ?? -1;
   return steps > 0 && steps <= NEAR_WATER_STEPS;
-}
-
-/** Closest dirt first, so clay gathers beside water. A hash breaks ties. */
-function byWaterThenHash(grid: MapGrid, seed: bigint, samples: Sample[], waterSteps: Int16Array) {
-  return [...samples].sort((a, b) => {
-    const steps = (waterSteps[indexOf(grid, a)] ?? 99) - (waterSteps[indexOf(grid, b)] ?? 99);
-    if (steps !== 0) {
-      return steps;
-    }
-    return mixSeed(seed, `deposit-pick:${b.x}:${b.y}`) - mixSeed(seed, `deposit-pick:${a.x}:${a.y}`);
-  });
 }
 
 function byHash(seed: bigint, samples: Sample[]) {
@@ -148,8 +104,4 @@ function closeAround(grid: MapGrid, blocked: Uint8Array, sample: Sample) {
 
 function indexOf(grid: MapGrid, sample: Sample) {
   return sample.y * grid.width + sample.x;
-}
-
-function unit(seed: bigint, stage: string) {
-  return mixSeed(seed, stage) / 4294967296;
 }

@@ -2,6 +2,7 @@ import type { WorldMapRepository } from "../persistence/world-map-repository.js"
 import type { WorldSessionRecord, WorldSessionRepository } from "../persistence/world-session-repository.js";
 import { clockFromTick } from "../simulation/clock.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
+import type { DepositPercents } from "../world/deposits.js";
 import { generateWorld, GenerationError } from "../world/generate.js";
 
 export class ServiceError extends Error {
@@ -23,6 +24,7 @@ export class WorldSessionService {
     private readonly gameSecondsPerTick: number,
     private readonly worldWidth: number,
     private readonly worldHeight: number,
+    private readonly deposits: DepositPercents,
   ) {}
 
   async create(input: { name: string; seed?: number }): Promise<WorldSessionRecord> {
@@ -32,7 +34,12 @@ export class WorldSessionService {
     const seed = input.seed === undefined ? randomSeed() : input.seed;
     let world;
     try {
-      world = generateWorld({ seed: BigInt(seed), width: this.worldWidth, height: this.worldHeight });
+      world = generateWorld({
+        seed: BigInt(seed),
+        width: this.worldWidth,
+        height: this.worldHeight,
+        deposits: this.deposits,
+      });
     } catch (error) {
       const message = error instanceof GenerationError ? error.message : "World generation failed.";
       throw new ServiceError("generation_failed", message);

@@ -55,6 +55,22 @@ New worlds use generation version `1`. The server derives the map from `world_se
 
 A world created before this migration has no map. Opening it shows “This world has no generated map.” Create a new world to generate one. Run `npm run db:migrate` before starting a server that expects the map tables.
 
+## Deposit amounts
+
+`worldConfig.json` in the repository root sets how many deposits a new world gets. Each number is a percent of the land tiles, from 0 through 100. Decimals are allowed. Water is not part of the percent, and water tiles stay empty.
+
+```json
+{
+  "deposits": {
+    "stone": 2,
+    "ore": 0.5,
+    "clay": 0.2
+  }
+}
+```
+
+`2` means about 2 of every 100 land tiles are stone. Clay is placed only on dirt, so a high clay percent stops when the dirt runs out. Restart the server after editing the file. Worlds already saved keep the deposits they were created with.
+
 ## UI live reload
 
 `docker compose up` serves a built copy of the site. A UI edit appears only after `docker compose up --build`. For live reload, keep the database and the server in Docker and run the site with Vite:

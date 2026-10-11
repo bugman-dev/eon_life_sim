@@ -56,6 +56,23 @@ describe("world generation", () => {
     expect(mapped.tiles.some((tile) => tile.deposits[0] === "clay")).toBe(true);
   });
 
+  it("places each deposit up to its share of the land", () => {
+    const deposits = { stone: 2, ore: 0.5, clay: 0.2 };
+    const world = generateWorld({ seed: 7n, deposits });
+    const land = world.tiles.filter((tile) => tile.terrainType !== "water").length;
+    const target = (percent: number) => Math.round((land * percent) / 100);
+    const count = (type: "stone" | "ore" | "clay") => world.tiles.filter((tile) => tile.deposits[0] === type).length;
+
+    expect(count("stone")).toBe(target(deposits.stone));
+    expect(count("ore")).toBe(target(deposits.ore));
+    expect(count("clay")).toBeGreaterThan(0);
+    expect(count("clay")).toBeLessThanOrEqual(target(deposits.clay));
+    expectDepositPlacement(world);
+
+    const none = generateWorld({ seed: 7n, deposits: { stone: 0, ore: 0, clay: 0 } });
+    expect(none.tiles.every((tile) => tile.deposits.length === 0)).toBe(true);
+  });
+
   it("builds a small grid and rejects dimensions outside the supported range", () => {
     const small = generateWorld({ seed: 3n, width: 8, height: 8 });
     expect(small.tiles).toHaveLength(64);
