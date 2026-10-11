@@ -1,27 +1,14 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { DepositType, VegetationType, WorldTile } from "@life-simulator/shared";
-
-/** The plant named in the selection. A tree on the tile is reported as trees. */
-export type SelectedVegetation = "trees" | "shrubs" | "flowers" | "grass";
+import type { WorldTile } from "@life-simulator/shared";
 
 /**
  * The one selected map item.
- * A ground click stores the tile and leaves deposit and vegetation empty.
- * A pile click stores that deposit. A plant click stores that plant.
- * A new click replaces the previous item.
+ * A click stores the tile under the pointer. The tile carries its deposit and plant.
+ * A new click replaces the previous tile.
  */
 export type Selection = {
   tile: WorldTile;
-  deposit: DepositType | null;
-  vegetation: SelectedVegetation | null;
 };
-
-export function selectedVegetation(type: VegetationType): SelectedVegetation {
-  if (type === "tree") {
-    return "trees";
-  }
-  return type;
-}
 
 /**
  * Shared page state.

@@ -1,15 +1,18 @@
 import { useEffect } from "react";
-import { PinIcon, TreeArt, TreeIcon } from "../assets/icons";
+import type { WorldTile } from "@life-simulator/shared";
 import { useAppState } from "../state/app-state";
+
+const GROWTH_STAGE_LABEL = { 1: "New", 2: "Growing", 3: "Mature" } as const;
 
 export default function SelectedItemData() {
   const { state } = useAppState();
+  const tile = state.selection?.tile ?? null;
 
   useEffect(() => {
-    if (state.selection) {
-      console.log(state.selection);
+    if (tile) {
+      console.log(tile);
     }
-  }, [state.selection]);
+  }, [tile]);
 
   return (
     <section className="eon-card eon-selected">
@@ -19,60 +22,55 @@ export default function SelectedItemData() {
           Ã—
         </button>
       </header>
-      <div className="eon-selected-title">
-        <span className="eon-tree-badge" aria-hidden="true">
-          <TreeIcon />
-        </span>
-        <div>
-          <strong>Tree</strong>
-          <small>Oak (Wild)</small>
-        </div>
-        <em>Healthy</em>
-      </div>
-      <div className="eon-tabs">
-        <button type="button" className="is-active">
-          Overview
-        </button>
-        <button type="button">Resources</button>
-        <button type="button">Notes</button>
-      </div>
-      <div className="eon-tree-art" aria-hidden="true">
-        <TreeArt />
-      </div>
-      <dl className="eon-facts">
-        <div>
-          <dt>Growth Stage</dt>
-          <dd>Mature</dd>
-        </div>
-        <div>
-          <dt>Health</dt>
-          <dd>
-            100%
-            <span className="eon-health">
-              <i />
-            </span>
-          </dd>
-        </div>
-        <div>
-          <dt>Biomass</dt>
-          <dd>120</dd>
-        </div>
-        <div>
-          <dt>Harvestable</dt>
-          <dd>80</dd>
-        </div>
-        <div>
-          <dt>Position</dt>
-          <dd>(248, 172)</dd>
-        </div>
-        <div>
-          <dt>Terrain</dt>
-          <dd>Grassland</dd>
-        </div>
-      </dl>
-      <button type="button" className="eon-primary">
-        <PinIcon /> View in World
-      </button>
+      {tile ? <TileFacts tile={tile} /> : <p>Click a tile to see its data.</p>}
     </section>
   );
+}
+
+function TileFacts({ tile }: { tile: WorldTile }) {
+  const deposit = tile.deposits[0];
+  const plant = tile.vegitation[0];
+
+  return (
+    <dl className="eon-facts">
+      <div>
+        <dt>Position</dt>
+        <dd>
+          ({tile.x}, {tile.y})
+        </dd>
+      </div>
+      <div>
+        <dt>Terrain</dt>
+        <dd>{label(tile.terrainType)}</dd>
+      </div>
+      <div>
+        <dt>Water</dt>
+        <dd>{label(tile.waterType)}</dd>
+      </div>
+      <div>
+        <dt>Soil</dt>
+        <dd>{label(tile.soilType)}</dd>
+      </div>
+      <div>
+        <dt>Fertility</dt>
+        <dd>{tile.fertility}</dd>
+      </div>
+      <div>
+        <dt>Elevation</dt>
+        <dd>{tile.elevation}</dd>
+      </div>
+      <div>
+        <dt>Deposit</dt>
+        <dd>{deposit ? `${label(deposit.type)} · ${deposit.amount} · ${GROWTH_STAGE_LABEL[deposit.growthStage]}` : "None"}</dd>
+      </div>
+      <div>
+        <dt>Vegetation</dt>
+        <dd>{plant ? `${label(plant.type)} · ${plant.amount} · ${GROWTH_STAGE_LABEL[plant.growthStage]}` : "None"}</dd>
+      </div>
+    </dl>
+  );
+}
+
+function label(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

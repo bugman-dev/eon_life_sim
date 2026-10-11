@@ -8,7 +8,7 @@ import depositUrl from "../assets/images/ResourceDepositAtlas.png";
 import shrubsUrl from "../assets/images/ShrubsAtlas.png";
 import treesUrl from "../assets/images/TreesAtlas.png";
 import type { Selection } from "../state/app-state";
-import { selectedVegetation, useAppState } from "../state/app-state";
+import { useAppState } from "../state/app-state";
 
 const TILE_WIDTH = 64;
 const VARIANT_COUNT = 6;
@@ -19,6 +19,12 @@ const DIAMOND_WIDTH = 217;
 const DIAMOND_HALF = 71;
 const TILE_SCALE = TILE_WIDTH / DIAMOND_WIDTH;
 const TILE_HEIGHT = DIAMOND_HALF * 2 * TILE_SCALE;
+/**
+ * The bottom of each plant sits on the middle of the diamond.
+ * Piles stay a little further forward, toward the front corner.
+ */
+const PLANT_GROUND_AT = 0.65;
+const RESOURCE_GROUND_AT = 0.75;
 
 const VIEWPORT_BACKGROUND = "#d7efc8";
 /** Wheel zoom stays between half and sixteen times the fitted view. */
@@ -313,7 +319,7 @@ async function startApplication(
   });
 }
 
-/** Dragging pans the map. A click logs the tile, and the deposit when the pointer lands on a pile. */
+/** Dragging pans the map. A click selects the diamond under the pointer. */
 function bindCamera(
   host: HTMLElement,
   worldRef: RefBox<Container | null>,
@@ -551,25 +557,38 @@ function createTileSprite(pixi: Pixi, texture: Texture, x: number, y: number, ma
 }
 
 /**
- * Sets the pile's base on the middle of the diamond.
+ * Sets the pile a little below the middle of the diamond.
  * The same coordinate keeps the same variant of that deposit.
  */
 function createDepositSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number) {
-  return createFootSprite(pixi, texture, x, y, mapHeight, lift, DEPOSIT_SCALE);
+  return createGroundedSprite(pixi, texture, x, y, mapHeight, lift, DEPOSIT_SCALE, RESOURCE_GROUND_AT);
 }
 
-/** Sets a plant's base on the middle of the diamond. Mature trees use the tall picture. */
+/** Sets the plant's base on the middle of the diamond. Mature trees use the tall picture. */
 function createPlantSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number, scale: number) {
-  return createFootSprite(pixi, texture, x, y, mapHeight, lift, scale);
+  return createGroundedSprite(pixi, texture, x, y, mapHeight, lift, scale, PLANT_GROUND_AT);
 }
 
-function createFootSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number, scale: number) {
+function createGroundedSprite(
+  pixi: Pixi,
+  texture: Texture,
+  x: number,
+  y: number,
+  mapHeight: number,
+  lift: number,
+  scale: number,
+  groundAt: number,
+) {
   const sprite = new pixi.Sprite(texture);
   const point = isoPoint(x, y, mapHeight);
   sprite.anchor.set(0.5, 1);
   sprite.scale.set(scale);
-  sprite.position.set(point.x, point.y + TILE_HEIGHT / 2 + lift);
+  sprite.position.set(point.x, groundY(point.y, lift, groundAt));
   return sprite;
+}
+
+function groundY(peakY: number, lift: number, groundAt: number) {
+  return peakY + TILE_HEIGHT * groundAt + lift;
 }
 
 function plantLook(plant: WorldTile["vegitation"][number]): { key: "large" | "small" | "shrubs" | "flowers" | "grass"; scale: number } {
@@ -672,16 +691,17 @@ function skirtHeight() {
   return Math.max(...Object.values(terrainFrames).flat().map((frame) => frame.height * TILE_SCALE - TILE_HEIGHT));
 }
 
-/** Space above the back tiles so a pile that rises past the diamond peak stays inside the camera. */
-function depositOverhang() {
-  const tallest = Math.max(...Object.values(depositFrames).flat().map((frame) => frame.height));
-  return Math.max(0, tallest * DEPOSIT_SCALE - TILE_HEIGHT / 2);
-}
-
-/** Space above the back tiles so a tall tree that rises past the diamond peak stays inside the camera. */
+/** Space above the back tiles so a picture that rises past the diamond peak stays inside the camera. */
 function sceneryOverhang() {
-  const tallestTree = Math.max(...largeTreeFrames.map((frame) => frame.height));
-  return Math.max(depositOverhang(), tallestTree * TREE_SCALE - TILE_HEIGHT / 2);
+  const rises = [
+    ...Object.values(depositFrames).flat().map((frame) => frame.height * DEPOSIT_SCALE - TILE_HEIGHT * RESOURCE_GROUND_AT),
+    ...largeTreeFrames.map((frame) => frame.height * TREE_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
+    ...smallTreeFrames.map((frame) => frame.height * TREE_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
+    ...shrubFrames.map((frame) => frame.height * SHRUB_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
+    ...flowerFrames.map((frame) => frame.height * FLOWER_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
+    ...grassPlantFrames.map((frame) => frame.height * GRASS_PLANT_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
+  ];
+  return Math.max(0, ...rises);
 }
 
 /** Places a tile's top corner. X grows down-right and Y grows down-left. */
@@ -692,7 +712,7 @@ function isoPoint(gridX: number, gridY: number, mapHeight: number): Point {
   };
 }
 
-/** Stores the tile under the pointer. A pile hit is stored as the selected deposit. */
+/** Stores the diamond under the pointer. Pictures do not take the click. */
 function selectAtPointer(
   host: HTMLElement,
   world: Container | null,
@@ -709,113 +729,11 @@ function selectAtPointer(
     x: (clientX - rect.left - world.x) / world.scale.x,
     y: (clientY - rect.top - world.y) / world.scale.y,
   };
-  const lift = sceneryOverhang();
-  const plantHit = plantAt(map, local, lift);
-  if (plantHit) {
-    const tile = tileAt(map, plantHit.x, plantHit.y);
-    if (tile) {
-      select({ tile, deposit: null, vegetation: selectedVegetation(plantHit.type) });
-    }
-    return;
-  }
-  const depositHit = depositAt(map, local, lift);
-  const tile = depositHit ? tileAt(map, depositHit.x, depositHit.y) : tileAtPoint(map, local, lift);
+  const tile = tileAtPoint(map, local, sceneryOverhang());
   if (!tile) {
     return;
   }
-  select({ tile, deposit: depositHit?.deposit ?? null, vegetation: null });
-}
-
-/** The front-most plant whose picture contains the point. Trees are tall, so the search reaches a few tiles back. */
-function plantAt(map: WorldMap, local: Point, lift: number): { x: number; y: number; type: VegetationType } | null {
-  const rough = gridAt(local, map.height, lift);
-  const candidates: { x: number; y: number }[] = [];
-  for (let y = rough.y - 4; y <= rough.y + 4; y += 1) {
-    for (let x = rough.x - 4; x <= rough.x + 4; x += 1) {
-      if (tileAt(map, x, y)) {
-        candidates.push({ x, y });
-      }
-    }
-  }
-  candidates.sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
-
-  let hit: { x: number; y: number; type: VegetationType } | null = null;
-  for (const candidate of candidates) {
-    const tile = tileAt(map, candidate.x, candidate.y);
-    if (!tile) {
-      continue;
-    }
-    for (const plant of tile.vegitation) {
-      if (insidePlant(map, local, candidate.x, candidate.y, plant, lift)) {
-        hit = { x: candidate.x, y: candidate.y, type: plant.type };
-      }
-    }
-  }
-  return hit;
-}
-
-function insidePlant(map: WorldMap, local: Point, x: number, y: number, plant: WorldTile["vegitation"][number], lift: number) {
-  const look = plantLook(plant);
-  const frames =
-    look.key === "large"
-      ? largeTreeFrames
-      : look.key === "small"
-        ? smallTreeFrames
-        : look.key === "shrubs"
-          ? shrubFrames
-          : look.key === "flowers"
-            ? flowerFrames
-            : grassPlantFrames;
-  const frame = frames[plantVariant(map.seed, x, y, plant.type)];
-  if (!frame) {
-    return false;
-  }
-  return insideFoot(map, local, x, y, frame, look.scale, lift);
-}
-
-/** The front-most pile whose picture contains the point. */
-function depositAt(map: WorldMap, local: Point, lift: number): { x: number; y: number; deposit: DepositType } | null {
-  const rough = gridAt(local, map.height, lift);
-  const candidates: { x: number; y: number }[] = [];
-  for (let y = rough.y - 2; y <= rough.y + 2; y += 1) {
-    for (let x = rough.x - 2; x <= rough.x + 2; x += 1) {
-      if (tileAt(map, x, y)) {
-        candidates.push({ x, y });
-      }
-    }
-  }
-  candidates.sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
-
-  let hit: { x: number; y: number; deposit: DepositType } | null = null;
-  for (const candidate of candidates) {
-    const tile = tileAt(map, candidate.x, candidate.y);
-    if (!tile) {
-      continue;
-    }
-    for (const deposit of tile.deposits) {
-      if (insideDeposit(map, local, candidate.x, candidate.y, deposit.type, lift)) {
-        hit = { x: candidate.x, y: candidate.y, deposit: deposit.type };
-      }
-    }
-  }
-  return hit;
-}
-
-function insideDeposit(map: WorldMap, local: Point, x: number, y: number, deposit: DepositType, lift: number) {
-  const frame = depositFrames[deposit][depositVariant(map.seed, x, y, deposit)];
-  if (!frame) {
-    return false;
-  }
-  return insideFoot(map, local, x, y, frame, DEPOSIT_SCALE, lift);
-}
-
-function insideFoot(map: WorldMap, local: Point, x: number, y: number, frame: Frame, scale: number, lift: number) {
-  const width = frame.width * scale;
-  const height = frame.height * scale;
-  const point = isoPoint(x, y, map.height);
-  const footX = point.x;
-  const footY = point.y + TILE_HEIGHT / 2 + lift;
-  return local.x >= footX - width / 2 && local.x <= footX + width / 2 && local.y >= footY - height && local.y <= footY;
+  select({ tile });
 }
 
 /** The diamond that contains the point, when the point is inside that diamond. */
