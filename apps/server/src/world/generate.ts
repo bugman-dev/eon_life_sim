@@ -1,4 +1,5 @@
 import { DEFAULT_WORLD_SIZE, WORLD_GENERATION_VERSION, WORLD_TILE_SIZE, type WorldTile } from "@life-simulator/shared";
+import { assignDeposits } from "./deposits.js";
 import { assignElevation } from "./elevation.js";
 import type { Sample } from "./grid.js";
 import { buildIsland } from "./island.js";
@@ -19,7 +20,8 @@ export type GenerateWorldInput = {
 /**
  * Builds a seeded island of grass, dirt, sand, and water.
  * The same seed and size always produce the same tiles.
- * Stored elevation stays 0. Vegetation and deposits stay empty.
+ * Stored elevation stays 0. Vegetation stays empty.
+ * Stone, ore, and clay are static deposits on the tiles.
  */
 export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   const width = input.width ?? DEFAULT_WORLD_SIZE;
@@ -34,6 +36,7 @@ export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   fillEnclosedLand(grid);
   assignCoastSand(grid, input.seed);
   assignDryLand(grid, input.seed);
+  assignDeposits(grid, input.seed);
 
   const world: GeneratedWorld = {
     seed: input.seed,
@@ -60,6 +63,6 @@ function toTile(sample: Sample): WorldTile {
     fertility: 0,
     vegetationType: "none",
     vegetationDensity: 0,
-    deposits: [],
+    deposits: [...sample.deposits],
   };
 }

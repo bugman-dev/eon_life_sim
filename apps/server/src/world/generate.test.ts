@@ -2,8 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import type { WorldTile } from "@life-simulator/shared";
 import { createStream } from "./prng.js";
-import { generateWorld } from "./generate.js";
+import { generateWorld, type GeneratedWorld } from "./generate.js";
 
 describe("seeded random streams", () => {
   it("repeats a stream and keeps stages apart", () => {
@@ -39,9 +40,20 @@ describe("world generation", () => {
     expect(grass).toBeGreaterThan(land.length / 2);
     expect(
       first.tiles.every(
-        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetationType === "none" && tile.deposits.length === 0,
+        (tile) => tile.elevation === 0 && tile.fertility === 0 && tile.vegetationType === "none" && tile.vegetationDensity === 0,
       ),
     ).toBe(true);
+  });
+
+  it("places stone and ore mostly on grass, and clay only on dirt near water", () => {
+    for (const seed of [7n, 8n, 11n]) {
+      expectDepositPlacement(generateWorld({ seed }));
+    }
+
+    const mapped = generateWorld({ seed: 7n });
+    expect(mapped.tiles.some((tile) => tile.deposits[0] === "stone")).toBe(true);
+    expect(mapped.tiles.some((tile) => tile.deposits[0] === "ore")).toBe(true);
+    expect(mapped.tiles.some((tile) => tile.deposits[0] === "clay")).toBe(true);
   });
 
   it("builds a small grid and rejects dimensions outside the supported range", () => {
@@ -63,3 +75,64 @@ describe("world generation", () => {
     }
   });
 });
+
+function expectDepositPlacement(world: GeneratedWorld) {
+  const distance = stepsFromWater(world.tiles);
+  const stone = world.tiles.filter((tile) => tile.deposits[0] === "stone");
+  const ore = world.tiles.filter((tile) => tile.deposits[0] === "ore");
+  const clay = world.tiles.filter((tile) => tile.deposits[0] === "clay");
+
+  expect(world.tiles.every((tile) => tile.deposits.length <= 1)).toBe(true);
+  expect(world.tiles.filter((tile) => tile.terrainType === "water").every((tile) => tile.deposits.length === 0)).toBe(true);
+  expect(mostlyGrass(stone)).toBe(true);
+  expect(mostlyGrass(ore)).toBe(true);
+  expect(clay.every((tile) => tile.terrainType === "dirt")).toBe(true);
+  if (clay.length > 0) {
+    const near = clay.filter((tile) => (distance.get(`${tile.x},${tile.y}`) ?? 99) <= 12).length;
+    expect(near).toBeGreaterThan(clay.length / 2);
+  }
+}
+
+function mostlyGrass(tiles: WorldTile[]) {
+  if (tiles.length === 0) {
+    return true;
+  }
+  return tiles.filter((tile) => tile.terrainType === "grass").length > tiles.length / 2;
+}
+
+/** Steps of land from the nearest water tile. Water itself is 0. */
+function stepsFromWater(tiles: WorldTile[]) {
+  const byKey = new Map(tiles.map((tile) => [`${tile.x},${tile.y}`, tile]));
+  const distance = new Map<string, number>();
+  const queue: WorldTile[] = [];
+  for (const tile of tiles) {
+    if (tile.terrainType === "water") {
+      distance.set(`${tile.x},${tile.y}`, 0);
+      queue.push(tile);
+    }
+  }
+
+  let head = 0;
+  while (head < queue.length) {
+    const tile = queue[head];
+    head += 1;
+    const steps = distance.get(`${tile.x},${tile.y}`) ?? 0;
+    for (const [dx, dy] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const) {
+      const key = `${tile.x + dx},${tile.y + dy}`;
+      if (distance.has(key) || !byKey.has(key)) {
+        continue;
+      }
+      distance.set(key, steps + 1);
+      const next = byKey.get(key);
+      if (next) {
+        queue.push(next);
+      }
+    }
+  }
+  return distance;
+}

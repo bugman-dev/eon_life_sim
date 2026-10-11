@@ -14,7 +14,7 @@ export class GenerationError extends Error {
   }
 }
 
-/** A finished map. Elevation, fertility, vegetation, and deposits are present but unused. */
+/** A finished map. Elevation, fertility, and vegetation stay unused. Deposits are static. */
 export type GeneratedWorld = {
   seed: bigint;
   generationVersion: typeof WORLD_GENERATION_VERSION;
@@ -36,7 +36,8 @@ export function assertDimensions(width: number, height: number): void {
 
 /**
  * Checks the map the pipeline is allowed to emit.
- * Both land and water are required. Elevation and resources must still be empty.
+ * Both land and water are required. Elevation and vegetation stay empty.
+ * A tile holds at most one deposit. Clay is only on dirt, and water holds none.
  */
 export function assertWorld(world: GeneratedWorld): void {
   if (world.generationVersion !== WORLD_GENERATION_VERSION) {
@@ -55,11 +56,17 @@ export function assertWorld(world: GeneratedWorld): void {
       throw new GenerationError("Tile coordinates must be unique and inside the map.");
     }
     seen.add(key);
-    if (tile.elevation !== 0 || tile.fertility !== 0 || tile.vegetationDensity !== 0) {
+    if (tile.elevation !== 0 || tile.fertility !== 0 || tile.vegetationDensity !== 0 || tile.vegetationType !== "none") {
       throw new GenerationError("Elevation, fertility, and vegetation are not generated yet.");
     }
-    if (tile.vegetationType !== "none" || tile.deposits.length > 0) {
-      throw new GenerationError("Resources are not generated yet.");
+    if (tile.deposits.length > 1 || new Set(tile.deposits).size !== tile.deposits.length) {
+      throw new GenerationError("A tile can hold one deposit.");
+    }
+    if (tile.terrainType === "water" && tile.deposits.length > 0) {
+      throw new GenerationError("A water tile cannot hold a deposit.");
+    }
+    if (tile.deposits.includes("clay") && tile.terrainType !== "dirt") {
+      throw new GenerationError("Clay can only sit on dirt.");
     }
     if ((tile.terrainType === "water") !== (tile.waterType !== "none")) {
       throw new GenerationError("Water and land attributes disagree.");
