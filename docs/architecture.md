@@ -88,7 +88,7 @@ The page is the EON layout in `apps/web/src/app/Layout.tsx`. The PixiJS viewport
 
 Live pieces read the session, the map, and the socket status: the top connection readout, the world button and Create World dialog, both play/pause controls, the timeline clock, and the map. The world button shows the stored seed and, once a map has arrived, the dimensions. Server errors open `errorModal.tsx`. The dialog accepts a type of Error, Info, or Warning. Current failures use Error.
 
-The viewport follows the PixiJS 8 application lifecycle: one `Application`, `resizeTo` the map area, and objects added to `app.stage`. The map is one `Container`. Each tile is a `Sprite` for grass, dirt, sand, or water, drawn once when the map arrives. Pan and zoom change that container. The simulation ticker does not redraw tiles. Switching worlds replaces the container children and destroys the previous sprites. Unmounting the page destroys the application.
+The viewport follows the PixiJS 8 application lifecycle: one `Application`, `resizeTo` the map area, and objects added to `app.stage`. The map is one `Container`. Each tile is a `Sprite` cut from `IsometricTerrainAtlas.png`. Grass, dirt, and sand each have six variations, and a tile keeps the variation chosen for its coordinate. Water uses the first picture. The sprites are drawn once when the map arrives. Pan and zoom change that container. The simulation ticker does not redraw tiles. Switching worlds replaces the container children and destroys the previous sprites. Unmounting the page destroys the application.
 
 A session with no map shows “This world has no generated map.” on the same full area.
 
