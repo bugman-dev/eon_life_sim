@@ -18,18 +18,18 @@
   },
   "vegitation": {
     "tree": {
-      "percent": 0.1,
+      "percent": 25,
       "minAmount": 10,
       "maxAmount": 100
     },
     "shrubs": {
-      "percent": 0.1
+      "percent": 10
     },
     "flowers": {
-      "percent": 0.1
+      "percent": 5
     },
     "grass": {
-      "percent": 0.1
+      "percent": 5
     }
   }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { DepositType, TerrainType, VegetationType, WorldMap, WorldTile } from "@life-simulator/shared";
+import { hashTile, type DepositType, type TerrainType, type VegetationType, type WorldMap, type WorldTile } from "@life-simulator/shared";
 import type { Container, Texture } from "pixi.js";
 import flowersUrl from "../assets/images/FlowersAtlas.png";
 import grassPlantsUrl from "../assets/images/GrassAtlas.png";
@@ -617,26 +617,17 @@ function frameIndex(terrain: TerrainType, seed: string, x: number, y: number): n
 
 /** Same seed and coordinate always pick the same ground variation. */
 function variantIndex(seed: string, x: number, y: number): number {
-  return hashVariant(`${seed}:${x}:${y}`, VARIANT_COUNT);
+  return hashTile(seed, "terrain", x, y) % VARIANT_COUNT;
 }
 
 /** Same seed, coordinate, and deposit always pick the same pile. */
 function depositVariant(seed: string, x: number, y: number, deposit: DepositType): number {
-  return hashVariant(`${seed}:${deposit}:${x}:${y}`, DEPOSIT_VARIANT_COUNT);
+  return hashTile(seed, deposit, x, y) % DEPOSIT_VARIANT_COUNT;
 }
 
 /** Same seed, coordinate, and plant always pick the same picture. */
 function plantVariant(seed: string, x: number, y: number, plant: VegetationType): number {
-  return hashVariant(`${seed}:${plant}:${x}:${y}`, PLANT_VARIANT_COUNT);
-}
-
-function hashVariant(text: string, count: number): number {
-  let hash = 2166136261;
-  for (let index = 0; index < text.length; index += 1) {
-    hash ^= text.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0) % count;
+  return hashTile(seed, plant, x, y) % PLANT_VARIANT_COUNT;
 }
 
 /** Decodes an atlas and removes its flat background. */

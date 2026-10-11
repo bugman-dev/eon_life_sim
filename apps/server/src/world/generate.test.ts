@@ -126,6 +126,26 @@ describe("world generation", () => {
     }
   });
 
+  it("scatters trees and stone instead of lining them up in bands", () => {
+    const world = generateWorld({
+      seed: 11n,
+      deposits: {
+        stone: { percent: 4, minAmount: 10, maxAmount: 20 },
+        ore: { percent: 1, minAmount: 10, maxAmount: 20 },
+        clay: { percent: 0.2, minAmount: 1, maxAmount: 5 },
+      },
+      vegitation: {
+        tree: { percent: 25, minAmount: 10, maxAmount: 100 },
+        shrubs: { percent: 8 },
+        flowers: { percent: 4 },
+        grass: { percent: 4 },
+      },
+    });
+
+    expect(columnSpread(world, "grass", (tile) => tile.vegitation.some((plant) => plant.type === "tree"))).toBeLessThan(0.35);
+    expect(columnSpread(world, "grass", (tile) => tile.deposits[0]?.type === "stone")).toBeLessThan(0.25);
+  });
+
   it("builds a small grid and rejects dimensions outside the supported range", () => {
     const small = generateWorld({ seed: 3n, width: 8, height: 8 });
     expect(small.tiles).toHaveLength(64);
@@ -145,6 +165,24 @@ describe("world generation", () => {
     }
   });
 });
+
+/** Widest gap in how often a feature appears down the grass columns. Bands make this large. */
+function columnSpread(world: GeneratedWorld, terrain: WorldTile["terrainType"], present: (tile: WorldTile) => boolean) {
+  const columns = new Map<number, { base: number; hits: number }>();
+  for (const tile of world.tiles) {
+    if (tile.terrainType !== terrain) {
+      continue;
+    }
+    const column = columns.get(tile.x) ?? { base: 0, hits: 0 };
+    column.base += 1;
+    if (present(tile)) {
+      column.hits += 1;
+    }
+    columns.set(tile.x, column);
+  }
+  const rates = [...columns.values()].filter((column) => column.base >= 30).map((column) => column.hits / column.base);
+  return Math.max(...rates) - Math.min(...rates);
+}
 
 function expectDepositPlacement(world: GeneratedWorld) {
   const distance = stepsFromWater(world.tiles);

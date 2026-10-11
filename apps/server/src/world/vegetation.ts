@@ -1,6 +1,5 @@
-import { DEPOSIT_GROWTH_STAGE, type VegetationItem, type VegetationType } from "@life-simulator/shared";
+import { DEPOSIT_GROWTH_STAGE, hashTile, type VegetationItem, type VegetationType } from "@life-simulator/shared";
 import type { MapGrid, Sample } from "./grid.js";
-import { mixSeed } from "./prng.js";
 import { GenerationError } from "./validate.js";
 
 /** Trees have a harvestable amount. The other plants are placed by percent only. */
@@ -94,16 +93,15 @@ function placeCover(options: Sample[], type: Exclude<VegetationType, "tree">, co
 /** A seeded yield inside the tree range. Most trees are mature. The same tile always gets the same record. */
 function treeRecord(seed: bigint, sample: Sample, band: TreeBand): VegetationItem {
   const span = band.maxAmount - band.minAmount + 1;
-  const amount = band.minAmount + (mixSeed(seed, `vegitation-amount:tree:${sample.x}:${sample.y}`) % span);
-  const roll = mixSeed(seed, `vegitation-stage:tree:${sample.x}:${sample.y}`) % 100;
+  const amount = band.minAmount + (hashTile(seed, "vegitation-amount:tree", sample.x, sample.y) % span);
+  const roll = hashTile(seed, "vegitation-stage:tree", sample.x, sample.y) % 100;
   const growthStage = roll < TREE_STAGE_NEW ? 1 : roll < TREE_STAGE_GROWING ? 2 : 3;
   return { type: "tree", amount, growthStage };
 }
 
+/** Orders tiles by a coordinate hash so the first picks are scattered, not lined up. */
 function byHash(seed: bigint, samples: Sample[], kind: string) {
-  return [...samples].sort(
-    (a, b) => mixSeed(seed, `vegitation-pick:${kind}:${b.x}:${b.y}`) - mixSeed(seed, `vegitation-pick:${kind}:${a.x}:${a.y}`),
-  );
+  return [...samples].sort((a, b) => hashTile(seed, `vegitation-pick:${kind}`, a.x, a.y) - hashTile(seed, `vegitation-pick:${kind}`, b.x, b.y) || a.x - b.x || a.y - b.y);
 }
 
 function assertSettings(settings: VegetationSettings) {

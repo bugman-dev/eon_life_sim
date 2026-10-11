@@ -1,6 +1,5 @@
-import { DEPOSIT_GROWTH_STAGE, type DepositType, type ResourceDeposit } from "@life-simulator/shared";
+import { DEPOSIT_GROWTH_STAGE, hashTile, type DepositType, type ResourceDeposit } from "@life-simulator/shared";
 import { distanceFrom, type MapGrid, type Sample } from "./grid.js";
-import { mixSeed } from "./prng.js";
 import { GenerationError } from "./validate.js";
 
 /** How many of one deposit to place, and the harvestable amount each pile can hold. */
@@ -79,7 +78,7 @@ function placeDeposits(
 /** A seeded yield inside that deposit's min and max. The same tile and deposit always get the same amount. Growth stays mature. */
 function depositRecord(seed: bigint, sample: Sample, type: DepositType, band: DepositBand): ResourceDeposit {
   const span = band.maxAmount - band.minAmount + 1;
-  const amount = band.minAmount + (mixSeed(seed, `deposit-amount:${type}:${sample.x}:${sample.y}`) % span);
+  const amount = band.minAmount + (hashTile(seed, `deposit-amount:${type}`, sample.x, sample.y) % span);
   return { type, amount, growthStage: DEPOSIT_GROWTH_STAGE };
 }
 
@@ -101,7 +100,7 @@ function clayOptions(grid: MapGrid, seed: bigint, land: Sample[], waterSteps: In
       if (steps !== 0) {
         return steps;
       }
-      return mixSeed(seed, `deposit-pick:${b.x}:${b.y}`) - mixSeed(seed, `deposit-pick:${a.x}:${a.y}`);
+      return hashTile(seed, "deposit-pick", a.x, a.y) - hashTile(seed, "deposit-pick", b.x, b.y) || a.x - b.x || a.y - b.y;
     });
 }
 
@@ -117,10 +116,9 @@ function withinNearWater(grid: MapGrid, waterSteps: Int16Array, sample: Sample) 
   return steps > 0 && steps <= NEAR_WATER_STEPS;
 }
 
+/** Orders tiles by a coordinate hash so the first picks are scattered, not lined up. */
 function byHash(seed: bigint, samples: Sample[]) {
-  return [...samples].sort(
-    (a, b) => mixSeed(seed, `deposit-pick:${b.x}:${b.y}`) - mixSeed(seed, `deposit-pick:${a.x}:${a.y}`),
-  );
+  return [...samples].sort((a, b) => hashTile(seed, "deposit-pick", a.x, a.y) - hashTile(seed, "deposit-pick", b.x, b.y) || a.x - b.x || a.y - b.y);
 }
 
 function closeAround(grid: MapGrid, blocked: Uint8Array, sample: Sample) {
