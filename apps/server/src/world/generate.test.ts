@@ -108,9 +108,9 @@ describe("world generation", () => {
 
     const trees = ofType("tree");
     const on = (terrain: "grass" | "sand" | "dirt") => trees.filter((entry) => entry.tile.terrainType === terrain).length;
-    expect(on("grass")).toBeGreaterThan(on("sand"));
-    expect(on("sand")).toBeGreaterThan(on("dirt"));
-    expect(on("dirt")).toBeGreaterThan(0);
+    expect(on("grass")).toBe(trees.length - on("sand") - on("dirt"));
+    expect(on("sand")).toBeLessThanOrEqual(1);
+    expect(on("dirt")).toBeLessThanOrEqual(on("sand"));
     const mature = trees.filter((entry) => entry.plant.growthStage === 3).length;
     expect(mature).toBeGreaterThan(trees.length / 2);
     expect(
@@ -123,6 +123,27 @@ describe("world generation", () => {
       expect(ofType(type).every((entry) => entry.tile.terrainType === "grass" && entry.plant.amount === 0 && entry.plant.growthStage === 3)).toBe(
         true,
       );
+    }
+  });
+
+  it("keeps sand to one or two trees when the tree percent is 90", () => {
+    for (const seed of [7n, 8n, 11n]) {
+      const world = generateWorld({
+        seed,
+        vegitation: {
+          tree: { percent: 90, minAmount: 10, maxAmount: 20 },
+          shrubs: { percent: 0 },
+          flowers: { percent: 0 },
+          grass: { percent: 0 },
+        },
+      });
+      const trees = world.tiles.filter((tile) => tile.vegitation[0]?.type === "tree");
+      const on = (terrain: "grass" | "sand" | "dirt") => trees.filter((tile) => tile.terrainType === terrain).length;
+      expect(on("sand")).toBeGreaterThanOrEqual(1);
+      expect(on("sand")).toBeLessThanOrEqual(2);
+      expect(on("dirt")).toBeLessThanOrEqual(1);
+      expect(on("dirt")).toBeLessThanOrEqual(on("sand"));
+      expect(on("grass")).toBeGreaterThan(on("sand"));
     }
   });
 

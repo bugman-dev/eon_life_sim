@@ -29,17 +29,20 @@ export const DEFAULT_VEGETATION_SETTINGS: VegetationSettings = {
   grass: { percent: 0.1 },
 };
 
-/** Share of the tree target placed on sand. */
-const TREE_SAND_SHARE = 0.15;
-/** Share of the tree target placed on dirt, the clay ground. */
-const TREE_DIRT_SHARE = 0.05;
+/**
+ * How many trees sit on sand when the tree percent is 90. Lower percents scale down.
+ * 1.5 means one or two trees at 90, and usually none at a small percent.
+ */
+const SAND_TREES_AT_90 = 1.5;
+/** Dirt stays below sand. At a tree percent of 90 this is zero or one tree. */
+const DIRT_TREES_AT_90 = 0.5;
 /** Rolls below this are new trees. The next band is growing. The rest are mature. */
 const TREE_STAGE_NEW = 15;
 const TREE_STAGE_GROWING = 30;
 
 /**
  * Places one plant on a tile, up to each percent of the land.
- * Trees sit mostly on grass, rarely on sand, and least often on dirt.
+ * Trees sit on grass. Sand gets about one or two when the percent is 90, and dirt gets fewer than that.
  * Shrubs, flowers, and grass tufts sit only on grass. Water stays empty.
  * A target that cannot fit is filled only as far as the open tiles allow.
  */
@@ -48,9 +51,9 @@ export function assignVegetation(grid: MapGrid, seed: bigint, settings: Vegetati
   const land = grid.samples.filter((sample) => sample.terrain !== "water");
   const target = (percent: number) => Math.round((land.length * percent) / 100);
   const treeTarget = target(settings.tree.percent);
-  const dirtCount = Math.floor(treeTarget * TREE_DIRT_SHARE);
-  const sandCount = Math.floor(treeTarget * TREE_SAND_SHARE);
-  const grassCount = treeTarget - dirtCount - sandCount;
+  const sandCount = rareTreeCount(seed, "tree-sand", settings.tree.percent, SAND_TREES_AT_90);
+  const dirtCount = Math.min(sandCount, rareTreeCount(seed, "tree-dirt", settings.tree.percent, DIRT_TREES_AT_90));
+  const grassCount = Math.max(0, treeTarget - sandCount - dirtCount);
 
   placeTrees(seed, settings.tree, byHash(seed, land.filter((sample) => sample.terrain === "grass"), "tree"), grassCount);
   placeTrees(seed, settings.tree, byHash(seed, land.filter((sample) => sample.terrain === "sand"), "tree"), sandCount);
@@ -88,6 +91,15 @@ function placeCover(options: Sample[], type: Exclude<VegetationType, "tree">, co
     sample.vegitation = [{ type, amount: 0, growthStage: DEPOSIT_GROWTH_STAGE }];
     placed += 1;
   }
+}
+
+/** A seeded count that scales with the tree percent. The same seed always picks the same count. */
+function rareTreeCount(seed: bigint, label: string, percent: number, atNinety: number) {
+  const expected = (percent / 90) * atNinety;
+  const whole = Math.floor(expected);
+  const fraction = expected - whole;
+  const roll = hashTile(seed, label, 0, 0) / 4294967296;
+  return whole + (roll < fraction ? 1 : 0);
 }
 
 /** A seeded yield inside the tree range. Most trees are mature. The same tile always gets the same record. */
