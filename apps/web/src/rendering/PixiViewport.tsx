@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type { TerrainType, WorldMap } from "@life-simulator/shared";
+import type { DepositType, TerrainType, WorldMap } from "@life-simulator/shared";
 import type { Container, Texture } from "pixi.js";
 import tilesetUrl from "../assets/images/IsometricTerrainAtlas.png";
+import depositUrl from "../assets/images/ResourceDepositAtlas.png";
 
 const TILE_WIDTH = 64;
 const VARIANT_COUNT = 6;
+const DEPOSIT_VARIANT_COUNT = 3;
 /** Shared ground size of a diamond in the atlas, in source pixels. */
 const DIAMOND_WIDTH = 217;
 const DIAMOND_HALF = 71;
@@ -45,9 +47,9 @@ type PixiViewportProps = {
   status: string | null;
 };
 
-/** Owns the keyed sheet and the frame textures cut from it. */
-type TerrainSheet = {
-  cut: (pixi: Pixi, source: Texture) => Record<TerrainType, Texture[]>;
+/** Owns one keyed sheet and the frame textures cut from it. */
+type SpriteSheet<Key extends string> = {
+  cut: (pixi: Pixi, source: Texture) => Record<Key, Texture[]>;
   release: () => void;
 };
 
@@ -90,9 +92,31 @@ const terrainFrames: Record<TerrainType, Frame[]> = {
   ],
 };
 
+/** Three variations of each deposit, left to right, in ResourceDepositAtlas.png. */
+const depositFrames: Record<DepositType, Frame[]> = {
+  stone: [
+    { x: 329, y: 150, width: 346, height: 162 },
+    { x: 831, y: 138, width: 344, height: 180 },
+    { x: 1334, y: 179, width: 350, height: 143 },
+  ],
+  ore: [
+    { x: 337, y: 395, width: 342, height: 159 },
+    { x: 814, y: 379, width: 365, height: 175 },
+    { x: 1334, y: 407, width: 354, height: 149 },
+  ],
+  clay: [
+    { x: 335, y: 630, width: 340, height: 161 },
+    { x: 817, y: 618, width: 353, height: 178 },
+    { x: 1335, y: 638, width: 353, height: 158 },
+  ],
+};
+
+/** Scales the widest pile down to one tile, so a deposit sits on its own diamond. */
+const DEPOSIT_SCALE = TILE_WIDTH / Math.max(...Object.values(depositFrames).flat().map((frame) => frame.width));
+
 /**
  * Fills the map area with one PixiJS application.
- * Sprites are built once when a map arrives. Dragging pans and the wheel zooms.
+ * Ground and deposit sprites are built once when a map arrives. Dragging pans and the wheel zooms.
  */
 export function PixiViewport({ map, status }: PixiViewportProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -141,9 +165,10 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
     }
 
     let cancelled = false;
-    const sheet = createTerrainSheet();
+    const terrainSheet = createSpriteSheet(terrainFrames);
+    const depositSheet = createSpriteSheet(depositFrames);
     const camera = cameraRef.current;
-    void paintMap(host, world, map, camera, sheet, () => cancelled || worldRef.current !== world).catch(
+    void paintMap(host, world, map, camera, terrainSheet, depositSheet, () => cancelled || worldRef.current !== world).catch(
       (caught: unknown) => {
         if (!cancelled) {
           setError(errorMessage(caught, "Map textures failed to load."));
@@ -154,7 +179,8 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
     return () => {
       cancelled = true;
       clearSprites(world);
-      sheet.release();
+      terrainSheet.release();
+      depositSheet.release();
     };
   }, [map, ready]);
 
@@ -260,18 +286,27 @@ async function paintMap(
   world: Container,
   map: WorldMap,
   camera: Camera,
-  sheet: TerrainSheet,
+  terrainSheet: SpriteSheet<TerrainType>,
+  depositSheet: SpriteSheet<DepositType>,
   isStale: () => boolean,
 ) {
   const pixi = await import("pixi.js");
-  const source = await loadTerrainSheet(tilesetUrl, pixi);
-  const textures = sheet.cut(pixi, source);
+  const terrainSource = await loadKeyedSheet(tilesetUrl, pixi);
+  const terrainTextures = terrainSheet.cut(pixi, terrainSource);
   if (isStale()) {
-    sheet.release();
+    terrainSheet.release();
+    depositSheet.release();
+    return;
+  }
+  const depositSource = await loadKeyedSheet(depositUrl, pixi);
+  const depositTextures = depositSheet.cut(pixi, depositSource);
+  if (isStale()) {
+    terrainSheet.release();
+    depositSheet.release();
     return;
   }
 
-  world.addChild(buildTileLayer(pixi, map, textures));
+  world.addChild(buildTileLayer(pixi, map, terrainTextures, depositTextures));
   const size = mapPixelSize(map);
   camera.pixelWidth = size.pixelWidth;
   camera.pixelHeight = size.pixelHeight;
@@ -289,7 +324,7 @@ function clearSprites(world: Container) {
  * Holds the keyed sheet and every frame cut from it.
  * release() drops the frames first, then the sheet, and a second call does nothing.
  */
-function createTerrainSheet(): TerrainSheet {
+function createSpriteSheet<Key extends string>(framesByKey: Record<Key, Frame[]>): SpriteSheet<Key> {
   const frames: Texture[] = [];
   let sheet: Texture | null = null;
 
@@ -297,8 +332,8 @@ function createTerrainSheet(): TerrainSheet {
     cut(pixi, source) {
       sheet = source;
       return Object.fromEntries(
-        (Object.entries(terrainFrames) as [TerrainType, Frame[]][]).map(([terrain, variants]) => [
-          terrain,
+        (Object.entries(framesByKey) as [Key, Frame[]][]).map(([key, variants]) => [
+          key,
           variants.map((frame) => {
             const texture = new pixi.Texture({
               source: source.source,
@@ -308,7 +343,7 @@ function createTerrainSheet(): TerrainSheet {
             return texture;
           }),
         ]),
-      ) as Record<TerrainType, Texture[]>;
+      ) as Record<Key, Texture[]>;
     },
     release() {
       const source = sheet;
@@ -321,26 +356,41 @@ function createTerrainSheet(): TerrainSheet {
   };
 }
 
-/** Builds the map in painter order so nearer tiles cover farther ones. */
-function buildTileLayer(pixi: Pixi, map: WorldMap, textures: Record<TerrainType, Texture[]>) {
+/** Builds the map in painter order so nearer tiles cover farther ones. A deposit is drawn on its own ground. */
+function buildTileLayer(
+  pixi: Pixi,
+  map: WorldMap,
+  terrainTextures: Record<TerrainType, Texture[]>,
+  depositTextures: Record<DepositType, Texture[]>,
+) {
   const layer = new pixi.Container();
-  forEachTile(map, (x, y, terrain) => {
-    const texture = textures[terrain][frameIndex(terrain, map.seed, x, y)];
-    layer.addChild(createTileSprite(pixi, texture, x, y, map.height));
+  const lift = depositOverhang();
+  forEachTile(map, (x, y, tile) => {
+    const ground = terrainTextures[tile.terrain][frameIndex(tile.terrain, map.seed, x, y)];
+    layer.addChild(createTileSprite(pixi, ground, x, y, map.height, lift));
+    for (const deposit of tile.deposits) {
+      const texture = depositTextures[deposit][depositVariant(map.seed, x, y, deposit)];
+      layer.addChild(createDepositSprite(pixi, texture, x, y, map.height, lift));
+    }
   });
   return layer;
 }
 
 /** Walks stored tiles from back to front. The diagonal sum x + y is the draw order. */
-function forEachTile(map: WorldMap, visit: (x: number, y: number, terrain: TerrainType) => void) {
-  const tiles = new Map(map.tiles.map((tile) => [`${tile.x},${tile.y}`, tile.terrainType]));
+function forEachTile(
+  map: WorldMap,
+  visit: (x: number, y: number, tile: { terrain: TerrainType; deposits: DepositType[] }) => void,
+) {
+  const tiles = new Map(
+    map.tiles.map((tile) => [`${tile.x},${tile.y}`, { terrain: tile.terrainType, deposits: tile.deposits }]),
+  );
   for (let sum = 0; sum < map.width + map.height - 1; sum += 1) {
     const xStart = Math.max(0, sum - (map.height - 1));
     const xEnd = Math.min(sum, map.width - 1);
     for (let x = xStart; x <= xEnd; x += 1) {
-      const terrain = tiles.get(`${x},${sum - x}`);
-      if (terrain) {
-        visit(x, sum - x, terrain);
+      const tile = tiles.get(`${x},${sum - x}`);
+      if (tile) {
+        visit(x, sum - x, tile);
       }
     }
   }
@@ -350,12 +400,25 @@ function forEachTile(map: WorldMap, visit: (x: number, y: number, terrain: Terra
  * Anchors the sprite on the diamond peak so neighboring tiles share edges.
  * Scale is the same for every frame, so a taller picture does not shrink the ground.
  */
-function createTileSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number) {
+function createTileSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number) {
   const sprite = new pixi.Sprite(texture);
   const point = isoPoint(x, y, mapHeight);
   sprite.anchor.set(0.5, 0);
   sprite.scale.set(TILE_SCALE);
-  sprite.position.set(point.x, point.y);
+  sprite.position.set(point.x, point.y + lift);
+  return sprite;
+}
+
+/**
+ * Sets the pile's base on the middle of the diamond.
+ * The same coordinate keeps the same variant of that deposit.
+ */
+function createDepositSprite(pixi: Pixi, texture: Texture, x: number, y: number, mapHeight: number, lift: number) {
+  const sprite = new pixi.Sprite(texture);
+  const point = isoPoint(x, y, mapHeight);
+  sprite.anchor.set(0.5, 1);
+  sprite.scale.set(DEPOSIT_SCALE);
+  sprite.position.set(point.x, point.y + TILE_HEIGHT / 2 + lift);
   return sprite;
 }
 
@@ -370,19 +433,27 @@ function frameIndex(terrain: TerrainType, seed: string, x: number, y: number): n
   return variantIndex(seed, x, y);
 }
 
-/** Same seed and coordinate always pick the same variation. */
+/** Same seed and coordinate always pick the same ground variation. */
 function variantIndex(seed: string, x: number, y: number): number {
+  return hashVariant(`${seed}:${x}:${y}`, VARIANT_COUNT);
+}
+
+/** Same seed, coordinate, and deposit always pick the same pile. */
+function depositVariant(seed: string, x: number, y: number, deposit: DepositType): number {
+  return hashVariant(`${seed}:${deposit}:${x}:${y}`, DEPOSIT_VARIANT_COUNT);
+}
+
+function hashVariant(text: string, count: number): number {
   let hash = 2166136261;
-  const text = `${seed}:${x}:${y}`;
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
     hash = Math.imul(hash, 16777619);
   }
-  return (hash >>> 0) % VARIANT_COUNT;
+  return (hash >>> 0) % count;
 }
 
-/** Decodes the atlas and removes its flat background. */
-async function loadTerrainSheet(url: string, pixi: Pixi) {
+/** Decodes an atlas and removes its flat background. */
+async function loadKeyedSheet(url: string, pixi: Pixi) {
   const image = new Image();
   image.src = url;
   await image.decode();
@@ -424,13 +495,19 @@ function mapPixelSize(map: WorldMap) {
   const span = map.width + map.height;
   return {
     pixelWidth: (span * TILE_WIDTH) / 2,
-    pixelHeight: (span * TILE_HEIGHT) / 2 + skirtHeight(),
+    pixelHeight: (span * TILE_HEIGHT) / 2 + skirtHeight() + depositOverhang(),
   };
 }
 
 /** Space below the ground diamond so a bush on a tall frame is not clipped. */
 function skirtHeight() {
   return Math.max(...Object.values(terrainFrames).flat().map((frame) => frame.height * TILE_SCALE - TILE_HEIGHT));
+}
+
+/** Space above the back tiles so a pile that rises past the diamond peak stays inside the camera. */
+function depositOverhang() {
+  const tallest = Math.max(...Object.values(depositFrames).flat().map((frame) => frame.height));
+  return Math.max(0, tallest * DEPOSIT_SCALE - TILE_HEIGHT / 2);
 }
 
 /** Places a tile's top corner. X grows down-right and Y grows down-left. */

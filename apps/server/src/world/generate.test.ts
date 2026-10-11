@@ -91,6 +91,34 @@ function expectDepositPlacement(world: GeneratedWorld) {
     const near = clay.filter((tile) => (distance.get(`${tile.x},${tile.y}`) ?? 99) <= 12).length;
     expect(near).toBeGreaterThan(clay.length / 2);
   }
+  expect(closestDepositGap(world.tiles)).toBeGreaterThanOrEqual(3);
+  if (stone.length > 8) {
+    const quadrants = new Set(stone.map((tile) => `${tile.x < world.width / 2 ? 0 : 1},${tile.y < world.height / 2 ? 0 : 1}`));
+    expect(quadrants.size).toBeGreaterThanOrEqual(3);
+  }
+}
+
+/** Smallest chebyshev gap between two deposits. Empty and single deposits count as spread out. */
+function closestDepositGap(tiles: WorldTile[]) {
+  const placed = tiles.filter((tile) => tile.deposits.length > 0);
+  let closest = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < placed.length; i += 1) {
+    const origin = placed[i];
+    if (!origin) {
+      continue;
+    }
+    for (let j = i + 1; j < placed.length; j += 1) {
+      const other = placed[j];
+      if (!other) {
+        continue;
+      }
+      const gap = Math.max(Math.abs(origin.x - other.x), Math.abs(origin.y - other.y));
+      if (gap < closest) {
+        closest = gap;
+      }
+    }
+  }
+  return closest;
 }
 
 function mostlyGrass(tiles: WorldTile[]) {
