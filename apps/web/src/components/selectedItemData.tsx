@@ -14,7 +14,7 @@ type Tab = (typeof TABS)[number];
 const GROWTH_STAGES = ["Young", "Young", "Mature"] as const;
 
 export default function SelectedItemData() {
-  const { state } = useAppState();
+  const { state, viewInWorld } = useAppState();
   const [tab, setTab] = useState<Tab>("Overview");
 
   useEffect(() => {
@@ -84,7 +84,16 @@ export default function SelectedItemData() {
           <Notes notes="" />
         )}
       </div>
-      <button type="button" className="eon-primary">
+      <button
+        type="button"
+        className="eon-primary"
+        onClick={() => {
+          const tile = state.selection?.tile;
+          if (tile) {
+            viewInWorld(tile.x, tile.y);
+          }
+        }}
+      >
         <PinIcon /> View in World
       </button>
     </section>

@@ -205,7 +205,7 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   const mapRef = useRef<WorldMap | null>(map);
   mapRef.current = map;
   const canvasesRef = useRef<KeyedCanvases | null>(null);
-  const { select, clearSelection } = useAppState();
+  const { select, clearSelection, registerViewInWorld } = useAppState();
   const selectRef = useRef(select);
   selectRef.current = select;
   const [error, setError] = useState<string | null>(null);
@@ -240,6 +240,26 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   useEffect(() => {
     clearSelection();
   }, [map, clearSelection]);
+
+  useEffect(() => {
+    registerViewInWorld((x, y) => {
+      const host = hostRef.current;
+      const world = worldRef.current;
+      const currentMap = mapRef.current;
+      const camera = cameraRef.current;
+      if (!host || !world || !currentMap || camera.pixelWidth === 0) {
+        return;
+      }
+      const scale = camera.fit * ZOOM_MAX;
+      const peak = isoPoint(x, y, currentMap.height);
+      const centerX = peak.x;
+      const centerY = peak.y + TILE_HEIGHT / 2 + sceneryOverhang();
+      world.scale.set(scale);
+      world.position.set(host.clientWidth / 2 - centerX * scale, host.clientHeight / 2 - centerY * scale);
+      clampPan(host, world, camera);
+    });
+    return () => registerViewInWorld(null);
+  }, [registerViewInWorld]);
 
   useEffect(() => {
     const host = hostRef.current;

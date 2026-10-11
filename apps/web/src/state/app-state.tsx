@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import type { WorldTile } from "@life-simulator/shared";
 
 /**
@@ -38,10 +38,14 @@ export type AppState = {
   selection: Selection | null;
 };
 
+type ViewInWorld = (x: number, y: number) => void;
+
 type AppStateContextValue = {
   state: AppState;
   select: (selection: Selection) => void;
   clearSelection: () => void;
+  viewInWorld: ViewInWorld;
+  registerViewInWorld: (handler: ViewInWorld | null) => void;
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -54,13 +58,22 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const clearSelection = useCallback(() => {
     setSelection(null);
   }, []);
+  const viewInWorldRef = useRef<ViewInWorld | null>(null);
+  const registerViewInWorld = useCallback((handler: ViewInWorld | null) => {
+    viewInWorldRef.current = handler;
+  }, []);
+  const viewInWorld = useCallback((x: number, y: number) => {
+    viewInWorldRef.current?.(x, y);
+  }, []);
   const value = useMemo<AppStateContextValue>(
     () => ({
       state: { selection },
       select,
       clearSelection,
+      viewInWorld,
+      registerViewInWorld,
     }),
-    [selection, select, clearSelection],
+    [selection, select, clearSelection, viewInWorld, registerViewInWorld],
   );
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>;
