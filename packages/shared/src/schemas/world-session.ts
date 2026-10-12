@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { worldMapSchema } from "./world-map.js";
+import { animalMoveSchema, worldMapSchema } from "./world-map.js";
 
 export const worldSessionStatusSchema = z.enum(["paused", "running"]);
 
@@ -59,6 +59,13 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("simulation.state"),
     payload: simulationStateSchema,
   }),
+  z
+    .object({
+      type: z.literal("animals.moved"),
+      worldId: z.string().uuid(),
+      payload: z.array(animalMoveSchema),
+    })
+    .strict(),
   z.object({
     type: z.literal("world.map"),
     payload: worldMapSchema,

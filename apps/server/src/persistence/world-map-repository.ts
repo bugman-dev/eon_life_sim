@@ -12,6 +12,7 @@ import {
 export interface WorldMapRepository {
   saveNewWorld(session: NewWorldSession, world: GeneratedWorld): Promise<WorldSessionRecord>;
   findMap(worldId: string): Promise<WorldMap | null>;
+  saveAnimalPositions(worldId: string, animals: AnimalRecord[]): Promise<void>;
 }
 
 type GenerationRow = {
@@ -158,6 +159,19 @@ export class PgWorldMapRepository implements WorldMapRepository {
       })),
       animals: await loadAnimals(this.pool, worldId),
     };
+  }
+
+  async saveAnimalPositions(worldId: string, animals: AnimalRecord[]): Promise<void> {
+    if (animals.length === 0) {
+      return;
+    }
+    await this.pool.query(
+      `UPDATE world_animals AS stored
+       SET x = animal.x, y = animal.y
+       FROM unnest($2::text[], $3::float8[], $4::float8[]) AS animal(id, x, y)
+       WHERE stored.world_id = $1 AND stored.id = animal.id::uuid`,
+      [worldId, animals.map((animal) => animal.id), animals.map((animal) => animal.x), animals.map((animal) => animal.y)],
+    );
   }
 }
 

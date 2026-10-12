@@ -16,10 +16,12 @@ export {
   vegetationItemSchema,
   vegetationTypeSchema,
   waterTypeSchema,
+  animalMoveSchema,
   animalSchema,
   animalSpeciesSchema,
   worldMapSchema,
   worldTileSchema,
+  type AnimalMove,
   type AnimalRecord,
   type AnimalSpecies,
   type DepositType,
@@ -42,3 +44,23 @@ export {
   type WorldSessionState,
   type WorldSessionStatus,
 } from "./schemas/world-session.js";
+export {
+  BASE_TRIANGLE,
+  groundOf,
+  landTiles,
+  moveThroughWorld,
+  obstaclesOn,
+  separate,
+  trianglePoints,
+  type Ground,
+  type Obstacle,
+} from "./world/collision.js";
+export {
+  HALF_TILE_HEIGHT,
+  HALF_TILE_WIDTH,
+  footDepth,
+  footOffset,
+  gridFromScreen,
+  gridStep,
+  type GridPoint,
+} from "./world/feet.js";

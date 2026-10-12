@@ -1,4 +1,6 @@
+import type { AnimalMove } from "@life-simulator/shared";
 import type { WorldSessionRecord, WorldSessionRepository } from "../persistence/world-session-repository.js";
+import type { AnimalMotion } from "./animal-motion.js";
 import { advanceOneTick, clockFromTick, isTickLagging, shouldPersistTick } from "./clock.js";
 
 export type ScheduledTask = {
@@ -47,6 +49,8 @@ export class SimulationRuntime {
     private readonly onChange: (session: WorldSessionRecord) => void,
     private readonly onLag: (worldId: string, elapsedMs: number) => void,
     private readonly onError: (worldId: string, error: unknown) => void,
+    private readonly motion: AnimalMotion | null = null,
+    private readonly onAnimals: (worldId: string, moves: AnimalMove[]) => void = () => undefined,
   ) {}
 
   getLive(worldId: string): WorldSessionRecord | null {
@@ -66,6 +70,7 @@ export class SimulationRuntime {
       }
 
       const current = this.live.get(session.id) ?? session;
+      await this.motion?.begin(session.id);
       const running = await this.repository.updateRuntime({ ...current, status: "running" });
       this.live.set(session.id, running);
       const nextLoop: Loop = { running: true, handle: null };
@@ -88,6 +93,7 @@ export class SimulationRuntime {
 
       const current = this.live.get(session.id) ?? session;
       const paused = await this.repository.updateRuntime({ ...current, status: "paused" });
+      await this.motion?.release(session.id);
       this.live.delete(session.id);
       this.onChange(paused);
       return { ...paused };
@@ -104,6 +110,7 @@ export class SimulationRuntime {
         this.loops.delete(worldId);
       }
       this.live.delete(worldId);
+      await this.motion?.release(worldId);
     });
   }
 
@@ -179,6 +186,19 @@ export class SimulationRuntime {
       } catch (error) {
         this.onError(worldId, error);
       }
+    }
+
+    if (!loop.running) {
+      return;
+    }
+
+    try {
+      const moved = await this.motion?.step(worldId, simulationTick);
+      if (moved && moved.length > 0 && loop.running) {
+        this.onAnimals(worldId, moved);
+      }
+    } catch (error) {
+      this.onError(worldId, error);
     }
 
     if (!loop.running) {

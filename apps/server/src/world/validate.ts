@@ -4,6 +4,7 @@ import {
   MIN_WORLD_SIZE,
   WORLD_GENERATION_VERSION,
   WORLD_TILE_SIZE,
+  animalSpeciesSchema,
   type AnimalRecord,
   type WorldTile,
 } from "@life-simulator/shared";
@@ -100,16 +101,16 @@ function assertAnimals(world: GeneratedWorld, tiles: Set<string>) {
   const seen = new Set<string>();
   const spots = new Set<string>();
   for (const animal of world.animals) {
-    if (animal.species !== "rabbit") {
-      throw new GenerationError("Only rabbits are generated.");
+    if (!animalSpeciesSchema.safeParse(animal.species).success) {
+      throw new GenerationError("An animal species is not recognized.");
     }
     const spot = `${animal.x},${animal.y}`;
     if (!tiles.has(spot) || seen.has(animal.id) || spots.has(spot)) {
-      throw new GenerationError("Each rabbit stands on its own land tile.");
+      throw new GenerationError("Each animal stands on its own land tile.");
     }
     const tile = world.tiles.find((entry) => entry.x === animal.x && entry.y === animal.y);
     if (!tile || tile.terrainType === "water") {
-      throw new GenerationError("A rabbit cannot stand on water.");
+      throw new GenerationError("An animal cannot stand on water.");
     }
     seen.add(animal.id);
     spots.add(spot);

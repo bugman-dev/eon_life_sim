@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { WorldMap, WorldSessionState } from "@life-simulator/shared";
+import type { AnimalMove, WorldMap, WorldSessionState } from "@life-simulator/shared";
 import {
   LAST_WORLD_STORAGE_KEY,
   SessionClient,
@@ -9,7 +9,7 @@ import {
   serverSocketUrl,
   type ConnectionStatus,
 } from "../networking/socket";
-import { Rabbits } from "../animals/Rabbits";
+import { Animals } from "../animals/Animals";
 import { PlayerMarker } from "../player/PlayerMarker";
 import { PixiViewport } from "../rendering/PixiViewport";
 import { WorldStageProvider } from "../rendering/world-stage";
@@ -22,6 +22,7 @@ export function App() {
   const [protocolVersion, setProtocolVersion] = useState<number | null>(null);
   const [session, setSession] = useState<WorldSessionState | null>(null);
   const [map, setMap] = useState<WorldMap | null>(null);
+  const [moves, setMoves] = useState<readonly AnimalMove[] | null>(null);
   const [mapUnavailable, setMapUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const clientRef = useRef<SessionClient | null>(null);
@@ -44,6 +45,7 @@ export function App() {
             return;
           }
           setMap(message.payload);
+          setMoves(null);
           setMapUnavailable(false);
           return;
         }
@@ -52,6 +54,7 @@ export function App() {
             return;
           }
           setMap(null);
+          setMoves(null);
           setMapUnavailable(true);
           return;
         }
@@ -63,6 +66,7 @@ export function App() {
           sessionIdRef.current = null;
           setSession(null);
           setMap(null);
+          setMoves(null);
           setMapUnavailable(false);
           setError(null);
           return;
@@ -75,8 +79,16 @@ export function App() {
           setError(null);
           if (changed) {
             setMap(null);
+            setMoves(null);
             setMapUnavailable(false);
           }
+          return;
+        }
+        if (message.type === "animals.moved") {
+          if (sessionIdRef.current && sessionIdRef.current !== message.worldId) {
+            return;
+          }
+          setMoves(message.payload);
           return;
         }
         if (message.type === "simulation.state") {
@@ -103,6 +115,7 @@ export function App() {
           sessionIdRef.current = null;
           setSession(null);
           setMap(null);
+          setMoves(null);
           setMapUnavailable(false);
         }
       },
@@ -214,7 +227,7 @@ export function App() {
             }
           />
           <PlayerMarker map={map} />
-          <Rabbits map={map} />
+          <Animals map={map} moves={moves} />
         </Layout>
         </main>
       </WorldStageProvider>

@@ -35,6 +35,15 @@ export const animalSchema = z
   })
   .strict();
 
+/** One animal's next point. The row is updated in place. The path is not stored. */
+export const animalMoveSchema = z
+  .object({
+    id: z.string().uuid(),
+    x: z.number().min(0).max(MAX_WORLD_SIZE),
+    y: z.number().min(0).max(MAX_WORLD_SIZE),
+  })
+  .strict();
+
 export const resourceDepositSchema = z
   .object({
     type: depositTypeSchema,
@@ -144,4 +153,5 @@ export type VegetationItem = z.infer<typeof vegetationItemSchema>;
 export type WorldTile = z.infer<typeof worldTileSchema>;
 export type AnimalSpecies = z.infer<typeof animalSpeciesSchema>;
 export type AnimalRecord = z.infer<typeof animalSchema>;
+export type AnimalMove = z.infer<typeof animalMoveSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;

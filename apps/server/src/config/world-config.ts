@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { animalSpeciesSchema, type AnimalSpecies } from "@life-simulator/shared";
 import { z } from "zod";
 import type { AnimalSettings } from "../world/animals.js";
 import type { DepositSettings } from "../world/deposits.js";
@@ -28,6 +29,21 @@ const plantBandSchema = z
   })
   .strict();
 
+const animalCountSchema = z
+  .object({
+    count: z.number().int().min(0).max(10000),
+  })
+  .strict();
+
+/** One count per species in the shared list. Adding a species there requires a count in worldConfig.json. */
+function animalSettingsSchema() {
+  const shape = Object.fromEntries(animalSpeciesSchema.options.map((species) => [species, animalCountSchema])) as Record<
+    AnimalSpecies,
+    typeof animalCountSchema
+  >;
+  return z.object(shape).strict();
+}
+
 const worldConfigSchema = z
   .object({
     deposits: z
@@ -45,15 +61,7 @@ const worldConfigSchema = z
         grass: plantBandSchema,
       })
       .strict(),
-    animals: z
-      .object({
-        rabbit: z
-          .object({
-            count: z.number().int().min(0).max(10000),
-          })
-          .strict(),
-      })
-      .strict(),
+    animals: animalSettingsSchema(),
   })
   .strict();
 

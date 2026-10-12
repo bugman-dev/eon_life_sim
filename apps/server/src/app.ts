@@ -8,6 +8,7 @@ import { createPool } from "./persistence/database.js";
 import { PgWorldMapRepository } from "./persistence/world-map-repository.js";
 import { PgWorldSessionRepository } from "./persistence/world-session-repository.js";
 import { createTimeoutScheduler, SimulationRuntime, type TickScheduler } from "./simulation/runtime.js";
+import { AnimalMotion } from "./simulation/animal-motion.js";
 import { toSimulationState } from "./world-session/state.js";
 import { ClientHub, registerGateway } from "./websocket/gateway.js";
 
@@ -27,6 +28,7 @@ export async function createApp(options: CreateAppOptions = {}) {
   const maps = new PgWorldMapRepository(pool);
   const scheduler = options.scheduler ?? createTimeoutScheduler();
   const hub = new ClientHub();
+  const motion = new AnimalMotion(maps);
   const runtime = new SimulationRuntime(
     repository,
     scheduler,
@@ -45,6 +47,10 @@ export async function createApp(options: CreateAppOptions = {}) {
         { worldId, message: error instanceof Error ? error.message : "Unknown tick failure" },
         "simulation tick failed to persist",
       );
+    },
+    motion,
+    (worldId, moves) => {
+      hub.publish(worldId, { type: "animals.moved", worldId, payload: moves });
     },
   );
 
