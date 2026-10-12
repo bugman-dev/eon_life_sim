@@ -1,4 +1,4 @@
-import type { DepositType, VegetationType, WorldMap, WorldTile } from "@life-simulator/shared";
+import type { AnimalRecord, DepositType, VegetationType, WorldMap, WorldTile } from "@life-simulator/shared";
 import type { Pool, PoolClient } from "pg";
 import type { GeneratedWorld } from "../world/generate.js";
 import {
@@ -48,6 +48,13 @@ type PlantRow = {
   growth_stage: WorldTile["vegitation"][number]["growthStage"];
 };
 
+type AnimalRow = {
+  id: string;
+  species: AnimalRecord["species"];
+  x: number;
+  y: number;
+};
+
 export class PgWorldMapRepository implements WorldMapRepository {
   constructor(private readonly pool: Pool) {}
 
@@ -64,6 +71,7 @@ export class PgWorldMapRepository implements WorldMapRepository {
       await insertTiles(client, session.id, world.tiles);
       await insertDeposits(client, session.id, world.tiles);
       await insertVegetation(client, session.id, world.tiles);
+      await insertAnimals(client, session.id, world.animals);
       await client.query("COMMIT");
       return inserted;
     } catch (error) {
@@ -148,6 +156,7 @@ export class PgWorldMapRepository implements WorldMapRepository {
         vegitation: plants.get(`${row.x},${row.y}`) ?? [],
         deposits: deposits.get(`${row.x},${row.y}`) ?? [],
       })),
+      animals: await loadAnimals(this.pool, worldId),
     };
   }
 }
@@ -241,6 +250,42 @@ async function insertVegetation(client: PoolClient, worldId: string, tiles: Worl
       points.map((point) => point.plant.growthStage),
     ],
   );
+}
+
+async function insertAnimals(client: PoolClient, worldId: string, animals: AnimalRecord[]) {
+  if (animals.length === 0) {
+    return;
+  }
+  await client.query(
+    `INSERT INTO world_animals (world_id, id, ordinal, species, x, y)
+     SELECT $1, animal.id::uuid, animal.ordinal, animal.species, animal.x, animal.y
+     FROM unnest($2::text[], $3::int[], $4::text[], $5::float8[], $6::float8[])
+       AS animal(id, ordinal, species, x, y)`,
+    [
+      worldId,
+      animals.map((animal) => animal.id),
+      animals.map((_, index) => index),
+      animals.map((animal) => animal.species),
+      animals.map((animal) => animal.x),
+      animals.map((animal) => animal.y),
+    ],
+  );
+}
+
+async function loadAnimals(pool: Pool, worldId: string): Promise<AnimalRecord[]> {
+  const rows = await pool.query<AnimalRow>(
+    `SELECT id, species, x, y
+     FROM world_animals
+     WHERE world_id = $1
+     ORDER BY ordinal`,
+    [worldId],
+  );
+  return rows.rows.map((row) => ({
+    id: row.id,
+    species: row.species,
+    x: Number(row.x),
+    y: Number(row.y),
+  }));
 }
 
 function roundStored(value: number) {

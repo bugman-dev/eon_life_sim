@@ -167,6 +167,21 @@ describe("world generation", () => {
     expect(columnSpread(world, "grass", (tile) => tile.deposits[0]?.type === "stone")).toBeLessThan(0.25);
   });
 
+  it("places the configured number of rabbits on separate land tiles", () => {
+    const world = generateWorld({ seed: 7n, width: 32, height: 32, animals: { rabbit: { count: 5 } } });
+    const again = generateWorld({ seed: 7n, width: 32, height: 32, animals: { rabbit: { count: 5 } } });
+    expect(world.animals).toEqual(again.animals);
+    expect(world.animals).toHaveLength(5);
+    expect(new Set(world.animals.map((animal) => animal.id)).size).toBe(5);
+    expect(new Set(world.animals.map((animal) => `${animal.x},${animal.y}`)).size).toBe(5);
+    for (const animal of world.animals) {
+      expect(animal.species).toBe("rabbit");
+      const tile = world.tiles.find((entry) => entry.x === animal.x && entry.y === animal.y);
+      expect(tile?.terrainType).not.toBe("water");
+    }
+    expect(generateWorld({ seed: 7n, width: 32, height: 32 }).animals).toEqual([]);
+  });
+
   it("builds a small grid and rejects dimensions outside the supported range", () => {
     const small = generateWorld({ seed: 3n, width: 8, height: 8 });
     expect(small.tiles).toHaveLength(64);

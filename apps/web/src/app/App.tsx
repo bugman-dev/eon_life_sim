@@ -9,6 +9,7 @@ import {
   serverSocketUrl,
   type ConnectionStatus,
 } from "../networking/socket";
+import { Rabbits } from "../animals/Rabbits";
 import { PlayerMarker } from "../player/PlayerMarker";
 import { PixiViewport } from "../rendering/PixiViewport";
 import { WorldStageProvider } from "../rendering/world-stage";
@@ -213,6 +214,7 @@ export function App() {
             }
           />
           <PlayerMarker map={map} />
+          <Rabbits map={map} />
         </Layout>
         </main>
       </WorldStageProvider>

@@ -31,5 +31,10 @@
     "grass": {
       "percent": 5
     }
+  },
+  "animals": {
+    "rabbit": {
+      "count": 20
+    }
   }
 }

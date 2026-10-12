@@ -1,4 +1,5 @@
 import { DEFAULT_WORLD_SIZE, WORLD_GENERATION_VERSION, WORLD_TILE_SIZE, type WorldTile } from "@life-simulator/shared";
+import { DEFAULT_ANIMAL_SETTINGS, spawnRabbits, type AnimalSettings } from "./animals.js";
 import { assignDeposits, DEFAULT_DEPOSIT_SETTINGS, type DepositSettings } from "./deposits.js";
 import { assignVegetation, DEFAULT_VEGETATION_SETTINGS, type VegetationSettings } from "./vegetation.js";
 import { assignElevation } from "./elevation.js";
@@ -20,6 +21,8 @@ export type GenerateWorldInput = {
   deposits?: DepositSettings;
   /** How many trees, shrubs, flowers, and grass tufts to place. Omitted calls use the shipped defaults. */
   vegitation?: VegetationSettings;
+  /** How many rabbits to place. Omitted calls place none. */
+  animals?: AnimalSettings;
 };
 
 /**
@@ -46,13 +49,16 @@ export function generateWorld(input: GenerateWorldInput): GeneratedWorld {
   assignDeposits(grid, input.seed, input.deposits ?? DEFAULT_DEPOSIT_SETTINGS);
   assignVegetation(grid, input.seed, input.vegitation ?? DEFAULT_VEGETATION_SETTINGS);
 
+  const tiles = grid.samples.map((sample) => toTile(sample));
+  const animals = input.animals ?? DEFAULT_ANIMAL_SETTINGS;
   const world: GeneratedWorld = {
     seed: input.seed,
     generationVersion: WORLD_GENERATION_VERSION,
     width,
     height,
     tileSize: WORLD_TILE_SIZE,
-    tiles: grid.samples.map((sample) => toTile(sample)),
+    tiles,
+    animals: spawnRabbits(tiles, input.seed, animals.rabbit.count),
   };
   assertWorld(world);
   return world;

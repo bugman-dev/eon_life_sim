@@ -4,6 +4,7 @@ import {
   MIN_WORLD_SIZE,
   WORLD_GENERATION_VERSION,
   WORLD_TILE_SIZE,
+  type AnimalRecord,
   type WorldTile,
 } from "@life-simulator/shared";
 
@@ -23,6 +24,7 @@ export type GeneratedWorld = {
   height: number;
   tileSize: typeof WORLD_TILE_SIZE;
   tiles: WorldTile[];
+  animals: AnimalRecord[];
 };
 
 /** Rejects sizes outside the range the schema and the database both allow. */
@@ -87,9 +89,30 @@ export function assertWorld(world: GeneratedWorld): void {
       land += 1;
     }
   }
+  assertAnimals(world, seen);
 
   if (water === 0 || land === 0) {
     throw new GenerationError("The map must contain both land and water.");
+  }
+}
+
+function assertAnimals(world: GeneratedWorld, tiles: Set<string>) {
+  const seen = new Set<string>();
+  const spots = new Set<string>();
+  for (const animal of world.animals) {
+    if (animal.species !== "rabbit") {
+      throw new GenerationError("Only rabbits are generated.");
+    }
+    const spot = `${animal.x},${animal.y}`;
+    if (!tiles.has(spot) || seen.has(animal.id) || spots.has(spot)) {
+      throw new GenerationError("Each rabbit stands on its own land tile.");
+    }
+    const tile = world.tiles.find((entry) => entry.x === animal.x && entry.y === animal.y);
+    if (!tile || tile.terrainType === "water") {
+      throw new GenerationError("A rabbit cannot stand on water.");
+    }
+    seen.add(animal.id);
+    spots.add(spot);
   }
 }
 

@@ -33,10 +33,13 @@ describe("world config", () => {
         clay: { percent: 0.2, minAmount: 1, maxAmount: 10 },
       },
       vegitation: {
-        tree: { percent: 0.1, minAmount: 10, maxAmount: 100 },
-        shrubs: { percent: 0.1 },
-        flowers: { percent: 0.1 },
-        grass: { percent: 0.1 },
+        tree: { percent: 15, minAmount: 10, maxAmount: 100 },
+        shrubs: { percent: 10 },
+        flowers: { percent: 5 },
+        grass: { percent: 5 },
+      },
+      animals: {
+        rabbit: { count: 20 },
       },
     });
   });
@@ -50,13 +53,17 @@ describe("world config", () => {
     expect(() => loadWorldConfig(invalid)).toThrow(/not valid JSON/);
 
     const high = mkdtempSync(join(tmpdir(), "world-config-"));
-    writeFileSync(join(high, "worldConfig.json"), JSON.stringify({ deposits: fileDeposits({ stone: { percent: 101 } }), vegitation: plants }), "utf8");
+    writeFileSync(
+      join(high, "worldConfig.json"),
+      JSON.stringify({ deposits: fileDeposits({ stone: { percent: 101 } }), vegitation: plants, animals: { rabbit: { count: 0 } } }),
+      "utf8",
+    );
     expect(() => loadWorldConfig(high)).toThrow(/stone/);
 
     const reversed = mkdtempSync(join(tmpdir(), "world-config-"));
     writeFileSync(
       join(reversed, "worldConfig.json"),
-      JSON.stringify({ deposits: fileDeposits({ ore: { minAmount: 400, maxAmount: 200 } }), vegitation: plants }),
+      JSON.stringify({ deposits: fileDeposits({ ore: { minAmount: 400, maxAmount: 200 } }), vegitation: plants, animals: { rabbit: { count: 0 } } }),
       "utf8",
     );
     expect(() => loadWorldConfig(reversed)).toThrow(/minAmount/);

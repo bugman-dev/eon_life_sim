@@ -63,6 +63,7 @@ export async function createApp(options: CreateAppOptions = {}) {
     worldHeight: config.worldHeight,
     deposits: config.deposits,
     vegitation: config.vegitation,
+    animals: config.animals,
     logger,
   });
 

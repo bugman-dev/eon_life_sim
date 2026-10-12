@@ -32,14 +32,18 @@ describe("world map persistence", () => {
       context.config.worldHeight,
       context.config.deposits,
       context.config.vegitation,
+      context.config.animals,
     );
 
     const created = await service.create({ name: "Mapped", seed: 11 });
     const loaded = await context.maps.findMap(created.id);
     const expected = generateWorld({
       seed: 11n,
+      width: context.config.worldWidth,
+      height: context.config.worldHeight,
       deposits: context.config.deposits,
       vegitation: context.config.vegitation,
+      animals: context.config.animals,
     });
     expect(loaded).toEqual({
       worldId: created.id,
@@ -49,6 +53,7 @@ describe("world map persistence", () => {
       height: expected.height,
       tileSize: 1,
       tiles: expected.tiles,
+      animals: expected.animals,
     });
 
     const legacy = await context.repository.insert({
@@ -105,6 +110,7 @@ describe("world map persistence", () => {
       context.config.worldHeight,
       context.config.deposits,
       context.config.vegitation,
+      context.config.animals,
     );
 
     const created = await service.create({ name: "Small", seed: 9 });
@@ -128,6 +134,7 @@ describe("world map persistence", () => {
       context.config.worldHeight,
       context.config.deposits,
       context.config.vegitation,
+      context.config.animals,
     );
 
     const created = await service.create({ name: "Doomed", seed: 3 });
@@ -142,15 +149,16 @@ describe("world map persistence", () => {
 
     const pool = new Pool({ connectionString: databaseUrl });
     try {
-      const counts = await pool.query<{ sessions: number; generations: number; tiles: number; deposits: number }>(
+      const counts = await pool.query<{ sessions: number; generations: number; tiles: number; deposits: number; animals: number }>(
         `SELECT
            (SELECT count(*)::int FROM world_sessions WHERE id = $1) AS sessions,
            (SELECT count(*)::int FROM world_generation WHERE world_id = $1) AS generations,
            (SELECT count(*)::int FROM world_tiles WHERE world_id = $1) AS tiles,
-           (SELECT count(*)::int FROM world_resource_deposits WHERE world_id = $1) AS deposits`,
+           (SELECT count(*)::int FROM world_resource_deposits WHERE world_id = $1) AS deposits,
+           (SELECT count(*)::int FROM world_animals WHERE world_id = $1) AS animals`,
         [created.id],
       );
-      expect(counts.rows[0]).toEqual({ sessions: 0, generations: 0, tiles: 0, deposits: 0 });
+      expect(counts.rows[0]).toEqual({ sessions: 0, generations: 0, tiles: 0, deposits: 0, animals: 0 });
     } finally {
       await pool.end();
     }

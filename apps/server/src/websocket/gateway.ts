@@ -6,6 +6,7 @@ import type { AppLogger } from "../observability/logger.js";
 import type { WorldMapRepository } from "../persistence/world-map-repository.js";
 import type { WorldSessionRepository } from "../persistence/world-session-repository.js";
 import type { SimulationRuntime } from "../simulation/runtime.js";
+import type { AnimalSettings } from "../world/animals.js";
 import type { DepositSettings } from "../world/deposits.js";
 import type { VegetationSettings } from "../world/vegetation.js";
 import { WorldSessionService } from "../world-session/world-session-service.js";
@@ -55,6 +56,7 @@ export type GatewayDependencies = {
   worldHeight: number;
   deposits: DepositSettings;
   vegitation: VegetationSettings;
+  animals: AnimalSettings;
   logger: AppLogger;
 };
 
@@ -73,6 +75,7 @@ export async function registerGateway(app: FastifyInstance, deps: GatewayDepende
     deps.worldHeight,
     deps.deposits,
     deps.vegitation,
+    deps.animals,
   );
 
   app.get("/ws", { websocket: true }, (socket) => {

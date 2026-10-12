@@ -1,12 +1,14 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import type { AnimalSettings } from "../world/animals.js";
 import type { DepositSettings } from "../world/deposits.js";
 import type { VegetationSettings } from "../world/vegetation.js";
 
 export type WorldRules = {
   deposits: DepositSettings;
   vegitation: VegetationSettings;
+  animals: AnimalSettings;
 };
 
 const depositBandSchema = z
@@ -41,6 +43,15 @@ const worldConfigSchema = z
         shrubs: plantBandSchema,
         flowers: plantBandSchema,
         grass: plantBandSchema,
+      })
+      .strict(),
+    animals: z
+      .object({
+        rabbit: z
+          .object({
+            count: z.number().int().min(0).max(10000),
+          })
+          .strict(),
       })
       .strict(),
   })

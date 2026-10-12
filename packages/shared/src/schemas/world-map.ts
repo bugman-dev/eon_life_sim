@@ -24,6 +24,17 @@ export const growthStageSchema = z.union([z.literal(1), z.literal(2), z.literal(
 
 export const vegetationTypeSchema = z.enum(["tree", "shrubs", "flowers", "grass"]);
 
+export const animalSpeciesSchema = z.enum(["rabbit"]);
+
+export const animalSchema = z
+  .object({
+    id: z.string().uuid(),
+    species: animalSpeciesSchema,
+    x: z.number().min(0).max(MAX_WORLD_SIZE),
+    y: z.number().min(0).max(MAX_WORLD_SIZE),
+  })
+  .strict();
+
 export const resourceDepositSchema = z
   .object({
     type: depositTypeSchema,
@@ -66,6 +77,8 @@ export const worldMapSchema = z
     height: z.number().int().min(MIN_WORLD_SIZE).max(MAX_WORLD_SIZE),
     tileSize: z.literal(WORLD_TILE_SIZE),
     tiles: z.array(worldTileSchema),
+    /** One row per animal. The array order is the spawn order. */
+    animals: z.array(animalSchema).default([]),
   })
   .strict()
   .superRefine((map, context) => {
@@ -98,6 +111,27 @@ export const worldMapSchema = z
       }
       seen.add(key);
     }
+
+    const animalIds = new Set<string>();
+    for (const animal of map.animals) {
+      if (animal.x >= map.width || animal.y >= map.height) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Animal coordinate is outside the map.",
+          path: ["animals"],
+        });
+        return;
+      }
+      if (animalIds.has(animal.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Animal ids must be unique.",
+          path: ["animals"],
+        });
+        return;
+      }
+      animalIds.add(animal.id);
+    }
   });
 
 export type TerrainType = z.infer<typeof terrainTypeSchema>;
@@ -108,4 +142,6 @@ export type ResourceDeposit = z.infer<typeof resourceDepositSchema>;
 export type VegetationType = z.infer<typeof vegetationTypeSchema>;
 export type VegetationItem = z.infer<typeof vegetationItemSchema>;
 export type WorldTile = z.infer<typeof worldTileSchema>;
+export type AnimalSpecies = z.infer<typeof animalSpeciesSchema>;
+export type AnimalRecord = z.infer<typeof animalSchema>;
 export type WorldMap = z.infer<typeof worldMapSchema>;
