@@ -5,7 +5,7 @@ export type GridPoint = {
 
 /**
  * Screen size of one grid step. These match the map diamond in the viewport.
- * Feet and collision are measured in screen pixels so a round base stays round on screen.
+ * Feet and collision are measured in screen pixels so a base keeps its shape on screen.
  */
 export const HALF_TILE_WIDTH = 32;
 export const HALF_TILE_HEIGHT = (71 * 64) / 217;

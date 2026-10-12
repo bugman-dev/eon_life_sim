@@ -14,4 +14,4 @@ Do not group objects into diagonal rows (`round(x) + round(y)`) and do not sort 
 
 A plant's key is the tile it stands on. The whole sprite, canopy included, uses that one baseline. `sortByFeet` keeps a body as a child of the props container (`props.sortableChildren`) with that depth.
 
-Collision is separate from drawing. Solid bases are circles at the same feet, and `drawCollisionCircles` only shows those circles for testing.
+Collision is separate from drawing. Solid bases are triangles at the same feet, and `drawCollisionTriangles` only shows those triangles for testing.

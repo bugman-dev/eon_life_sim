@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Container } from "pixi.js";
 import type { WorldMap } from "@life-simulator/shared";
 import { useWorldStage } from "../rendering/world-stage";
-import { drawCollisionCircles, groundOf } from "../world/collision";
+import { drawCollisionTriangles, groundOf, showCollisionBox } from "../world/collision";
 import { createHeldDirections, directionFromKey, isTypingTarget } from "./controls";
 import { PLAYER_RADIUS, roamPlayer, spawnClear, type GridPoint } from "./player";
 
@@ -57,16 +57,18 @@ export function PlayerMarker({ map }: { map: WorldMap | null }) {
       dot.circle(0, 0, PLAYER_RADIUS).fill({ color: 0x2f6fed }).stroke({ width: 2, color: 0xffffff });
       body.addChild(dot);
       body.eventMode = "none";
-      const rings = drawCollisionCircles(new pixi.Graphics(), ground.obstacles);
+      const triangles = showCollisionBox ? drawCollisionTriangles(new pixi.Graphics(), ground.obstacles) : null;
       const position = visualRef.current;
       if (!position) {
         body.destroy({ children: true });
-        rings.destroy();
+        triangles?.destroy();
         return;
       }
       bodyRef.current = body;
       attachEntity(body);
-      attachOverlay(rings);
+      if (triangles) {
+        attachOverlay(triangles);
+      }
       placeEntity(body, position.x, position.y);
       setPlaced((value) => value + 1);
     });
