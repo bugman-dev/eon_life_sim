@@ -9,7 +9,9 @@ import {
   serverSocketUrl,
   type ConnectionStatus,
 } from "../networking/socket";
+import { PlayerMarker } from "../player/PlayerMarker";
 import { PixiViewport } from "../rendering/PixiViewport";
+import { WorldStageProvider } from "../rendering/world-stage";
 import { AppStateProvider } from "../state/app-state";
 import ErrorModal from "../modals/errorModal";
 import Layout from "./Layout";
@@ -176,7 +178,8 @@ export function App() {
 
   return (
     <AppStateProvider>
-      <main>
+      <WorldStageProvider>
+        <main>
         <Layout
           session={session}
           connection={connection}
@@ -209,8 +212,10 @@ export function App() {
                 : null
             }
           />
+          <PlayerMarker map={map} />
         </Layout>
-      </main>
+        </main>
+      </WorldStageProvider>
     </AppStateProvider>
   );
 }

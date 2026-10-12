@@ -9,6 +9,9 @@ import shrubsUrl from "../assets/images/ShrubsAtlas.png";
 import treesUrl from "../assets/images/TreesAtlas.png";
 import type { Selection } from "../state/app-state";
 import { useAppState } from "../state/app-state";
+import { footDepth } from "../world/feet";
+import { sortByFeet } from "../world/draw-order";
+import { useWorldStage } from "./world-stage";
 
 const TILE_WIDTH = 64;
 const VARIANT_COUNT = 6;
@@ -205,7 +208,12 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   const mapRef = useRef<WorldMap | null>(map);
   mapRef.current = map;
   const canvasesRef = useRef<KeyedCanvases | null>(null);
+  const mapLayerRef = useRef<Container | null>(null);
+  const propsRef = useRef<Container | null>(null);
+  const entitiesRef = useRef<Map<Container, Point | null>>(new Map());
+  const overlayRef = useRef<Container | null>(null);
   const { select, clearSelection, registerViewInWorld } = useAppState();
+  const { registerStage, noteViewFitted } = useWorldStage();
   const selectRef = useRef(select);
   selectRef.current = select;
   const [error, setError] = useState<string | null>(null);
@@ -262,13 +270,92 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
   }, [registerViewInWorld]);
 
   useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    registerStage({
+      attachEntity(container) {
+        const world = worldRef.current;
+        if (!world) {
+          return;
+        }
+        const point = entitiesRef.current.get(container);
+        if (point === undefined) {
+          entitiesRef.current.set(container, null);
+          return;
+        }
+        if (point) {
+          sortByFeet(container, point.x, point.y, propsRef.current, world);
+        }
+      },
+      detachEntity(container) {
+        if (!entitiesRef.current.has(container)) {
+          return;
+        }
+        entitiesRef.current.delete(container);
+        container.removeFromParent();
+        container.destroy({ children: true });
+      },
+      attachOverlay(container) {
+        const world = worldRef.current;
+        const currentMap = mapRef.current;
+        if (!world || !currentMap) {
+          return;
+        }
+        if (overlayRef.current && overlayRef.current !== container) {
+          overlayRef.current.destroy({ children: true });
+        }
+        overlayRef.current = container;
+        pinOverlay(container, currentMap.height, world);
+      },
+      detachOverlay() {
+        const overlay = overlayRef.current;
+        overlayRef.current = null;
+        if (!overlay) {
+          return;
+        }
+        overlay.removeFromParent();
+        overlay.destroy({ children: true });
+      },
+      placeEntity(container, x, y) {
+        const currentMap = mapRef.current;
+        const world = worldRef.current;
+        if (!currentMap || !world || !entitiesRef.current.has(container)) {
+          return;
+        }
+        const grid = { x, y };
+        entitiesRef.current.set(container, grid);
+        positionEntity(container, grid, currentMap.height, propsRef.current, world);
+      },
+      centerView(x, y) {
+        const host = hostRef.current;
+        const world = worldRef.current;
+        const currentMap = mapRef.current;
+        const camera = cameraRef.current;
+        if (!host || !world || !currentMap || camera.pixelWidth === 0) {
+          return;
+        }
+        const point = tileCenter(x, y, currentMap.height);
+        const scale = world.scale.x;
+        world.position.set(host.clientWidth / 2 - point.x * scale, host.clientHeight / 2 - point.y * scale);
+        clampPan(host, world, camera);
+      },
+    });
+    return () => {
+      entitiesRef.current.clear();
+      overlayRef.current = null;
+      registerStage(null);
+    };
+  }, [ready, registerStage]);
+
+  useEffect(() => {
     const host = hostRef.current;
     const world = worldRef.current;
     if (!ready || !host || !world) {
       return;
     }
 
-    clearSprites(world);
+    clearMapLayer(mapLayerRef, propsRef, entitiesRef);
     if (!map) {
       cameraRef.current = emptyCamera();
       return;
@@ -289,23 +376,37 @@ export function PixiViewport({ map, status }: PixiViewportProps) {
       map,
       camera,
       canvasesRef,
+      mapLayerRef,
+      propsRef,
       { terrain: terrainSheet, deposits: depositSheet, trees: treeSheet, shrubs: shrubSheet, flowers: flowerSheet, grass: grassSheet },
       () => cancelled || worldRef.current !== world,
-    ).catch((caught: unknown) => {
-      if (!cancelled) {
-        setError(errorMessage(caught, "Map textures failed to load."));
-      }
-    });
+    )
+      .then((fitted) => {
+        if (cancelled || !fitted) {
+          return;
+        }
+        restackEntities(entitiesRef.current, map.height, propsRef.current, world);
+        const overlay = overlayRef.current;
+        if (overlay) {
+          pinOverlay(overlay, map.height, world);
+        }
+        noteViewFitted();
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(errorMessage(caught, "Map textures failed to load."));
+        }
+      });
 
     return () => {
       cancelled = true;
       canvasesRef.current = null;
-      clearSprites(world);
+      clearMapLayer(mapLayerRef, propsRef, entitiesRef);
       for (const sheet of sheets) {
         sheet.release();
       }
     };
-  }, [map, ready]);
+  }, [map, ready, noteViewFitted]);
 
   return (
     <section className="eon-viewport" aria-label="World view">
@@ -432,6 +533,8 @@ async function paintMap(
   map: WorldMap,
   camera: Camera,
   canvasesRef: RefBox<KeyedCanvases | null>,
+  mapLayerRef: RefBox<Container | null>,
+  propsRef: RefBox<Container | null>,
   sheets: {
     terrain: SpriteSheet<TerrainType>;
     deposits: SpriteSheet<DepositType>;
@@ -453,7 +556,7 @@ async function paintMap(
   ]);
   if (isStale()) {
     releaseSheets(sheets);
-    return;
+    return false;
   }
   const terrainTextures = sheets.terrain.cut(pixi, pixi.Texture.from(terrainCanvas));
   const depositTextures = sheets.deposits.cut(pixi, pixi.Texture.from(depositCanvas));
@@ -463,7 +566,7 @@ async function paintMap(
   const grassTextures = sheets.grass.cut(pixi, pixi.Texture.from(grassCanvas));
   if (isStale()) {
     releaseSheets(sheets);
-    return;
+    return false;
   }
   canvasesRef.current = {
     terrain: terrainCanvas,
@@ -474,19 +577,21 @@ async function paintMap(
     grass: grassCanvas,
   };
 
-  world.addChild(
-    buildTileLayer(pixi, map, terrainTextures, depositTextures, {
-      large: treeTextures.large,
-      small: treeTextures.small,
-      shrubs: shrubTextures.shrubs,
-      flowers: flowerTextures.flowers,
-      grass: grassTextures.grass,
-    }),
-  );
+  const built = buildTileLayer(pixi, map, terrainTextures, depositTextures, {
+    large: treeTextures.large,
+    small: treeTextures.small,
+    shrubs: shrubTextures.shrubs,
+    flowers: flowerTextures.flowers,
+    grass: grassTextures.grass,
+  });
+  mapLayerRef.current = built.layer;
+  propsRef.current = built.props;
+  world.addChild(built.layer);
   const size = mapPixelSize(map);
   camera.pixelWidth = size.pixelWidth;
   camera.pixelHeight = size.pixelHeight;
   fitMap(host, world, camera);
+  return true;
 }
 
 function releaseSheets(sheets: { [key: string]: { release: () => void } }) {
@@ -495,11 +600,43 @@ function releaseSheets(sheets: { [key: string]: { release: () => void } }) {
   }
 }
 
-/** Removes sprites without destroying the textures they share. */
-function clearSprites(world: Container) {
-  for (const child of world.removeChildren()) {
-    child.destroy({ children: true, texture: false, textureSource: false });
+/** Removes the map layer. Bodies are lifted off first so the prop list does not destroy them. */
+function clearMapLayer(
+  mapLayerRef: RefBox<Container | null>,
+  propsRef: RefBox<Container | null>,
+  entitiesRef: RefBox<Map<Container, Point | null>>,
+) {
+  for (const container of entitiesRef.current.keys()) {
+    container.removeFromParent();
   }
+  propsRef.current = null;
+  const layer = mapLayerRef.current;
+  mapLayerRef.current = null;
+  layer?.destroy({ children: true, texture: false, textureSource: false });
+}
+
+/** Puts every placed body back on the prop list after the map is rebuilt. */
+function restackEntities(entities: Map<Container, Point | null>, mapHeight: number, props: Container | null, world: Container) {
+  for (const [container, grid] of entities) {
+    if (grid) {
+      positionEntity(container, grid, mapHeight, props, world);
+    }
+  }
+}
+
+/** Moves a body to the screen point of its feet and sorts it with the props. */
+function positionEntity(container: Container, grid: Point, mapHeight: number, props: Container | null, world: Container) {
+  const point = tileCenter(grid.x, grid.y, mapHeight);
+  container.position.set(point.x, point.y);
+  sortByFeet(container, grid.x, grid.y, props, world);
+}
+
+/** Pins a test drawing to the foot of grid (0, 0) and keeps it above the map. */
+function pinOverlay(overlay: Container, mapHeight: number, world: Container) {
+  const origin = tileCenter(0, 0, mapHeight);
+  overlay.position.set(origin.x, origin.y);
+  overlay.eventMode = "none";
+  world.addChild(overlay);
 }
 
 /**
@@ -538,7 +675,10 @@ function createSpriteSheet<Key extends string>(framesByKey: Record<Key, Frame[]>
   };
 }
 
-/** Builds the map in painter order so nearer tiles cover farther ones. A deposit is drawn on its own ground. */
+/**
+ * Draws every ground diamond first, back to front.
+ * Plants and deposits share a second list, ordered by the screen depth of their feet.
+ */
 function buildTileLayer(
   pixi: Pixi,
   map: WorldMap,
@@ -547,21 +687,31 @@ function buildTileLayer(
   plantTextures: Record<"large" | "small" | "shrubs" | "flowers" | "grass", Texture[]>,
 ) {
   const layer = new pixi.Container();
+  const ground = new pixi.Container();
+  const props = new pixi.Container();
+  props.sortableChildren = true;
+  layer.addChild(ground);
+  layer.addChild(props);
   const lift = sceneryOverhang();
   forEachTile(map, (x, y, tile) => {
-    const ground = terrainTextures[tile.terrain][frameIndex(tile.terrain, map.seed, x, y)];
-    layer.addChild(createTileSprite(pixi, ground, x, y, map.height, lift));
+    const terrain = terrainTextures[tile.terrain][frameIndex(tile.terrain, map.seed, x, y)];
+    ground.addChild(createTileSprite(pixi, terrain, x, y, map.height, lift));
+    const depth = footDepth(x, y);
     for (const deposit of tile.deposits) {
       const texture = depositTextures[deposit.type][depositVariant(map.seed, x, y, deposit.type)];
-      layer.addChild(createDepositSprite(pixi, texture, x, y, map.height, lift));
+      const depositSprite = createDepositSprite(pixi, texture, x, y, map.height, lift);
+      depositSprite.zIndex = depth;
+      props.addChild(depositSprite);
     }
     for (const plant of tile.vegitation) {
       const look = plantLook(plant);
       const texture = plantTextures[look.key][plantVariant(map.seed, x, y, plant.type)];
-      layer.addChild(createPlantSprite(pixi, texture, x, y, map.height, lift, look.scale));
+      const plantSprite = createPlantSprite(pixi, texture, x, y, map.height, lift, look.scale);
+      plantSprite.zIndex = depth;
+      props.addChild(plantSprite);
     }
   });
-  return layer;
+  return { layer, props };
 }
 
 /** Walks stored tiles from back to front. The diagonal sum x + y is the draw order. */
@@ -737,6 +887,15 @@ function sceneryOverhang() {
     ...grassPlantFrames.map((frame) => frame.height * GRASS_PLANT_SCALE - TILE_HEIGHT * PLANT_GROUND_AT),
   ];
   return Math.max(0, ...rises);
+}
+
+/** The middle of a tile diamond, in the same space the camera pans. */
+function tileCenter(gridX: number, gridY: number, mapHeight: number): Point {
+  const peak = isoPoint(gridX, gridY, mapHeight);
+  return {
+    x: peak.x,
+    y: peak.y + TILE_HEIGHT / 2 + sceneryOverhang(),
+  };
 }
 
 /** Places a tile's top corner. X grows down-right and Y grows down-left. */

@@ -18,7 +18,7 @@
   },
   "vegitation": {
     "tree": {
-      "percent": 25,
+      "percent": 15,
       "minAmount": 10,
       "maxAmount": 100
     },

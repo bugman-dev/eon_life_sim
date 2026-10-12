@@ -1,0 +1,17 @@
+---
+description: Draw order for the isometric map, plants, and moving bodies
+globs: apps/web/src/rendering/**/*.{ts,tsx},apps/web/src/world/**/*.ts,apps/web/src/player/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Isometric draw order
+
+Ground diamonds draw first, back to front, and do not share a sort with standing objects.
+
+Plants, deposits, and moving bodies share one list. The sort key is the screen depth of the feet, `footDepth(x, y)` which is `x + y`. A larger sum is lower on the screen and draws in front. A moving body uses its continuous position, not a rounded tile.
+
+Do not group objects into diagonal rows (`round(x) + round(y)`) and do not sort a row by `x` alone. That pops a body across a whole diagonal.
+
+A plant's key is the tile it stands on. The whole sprite, canopy included, uses that one baseline. `sortByFeet` keeps a body as a child of the props container (`props.sortableChildren`) with that depth.
+
+Collision is separate from drawing. Solid bases are circles at the same feet, and `drawCollisionCircles` only shows those circles for testing.
